@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisOps — Incident Intelligence & Forensic Reconstruction</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 1. Header Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-badge" id="brand-home">
+          <div class="brand-icon">🛡️</div>
+          <div class="brand-name">AegisOps</div>
+        </div>
+        <div class="header-divider"></div>
+        <div class="incident-picker">
+          <select id="incident-select" class="select-box" title="Select Incident"></select>
+          <span id="incident-title" class="incident-title-label">Loading incident...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="btn-open-ingest" class="btn-solid-green" title="Upload telemetry file (runs automated AI multi-agent analysis)">
+          <span>⚡</span> Upload &amp; Auto-Analyze
+        </button>
+        <button id="btn-reprocess" class="btn-outline" title="Re-run multi-agent synthesis & ML pipeline on current data">
+          <span>▶</span> Re-run Pipeline
+        </button>
+        <button id="btn-clear-dummy" class="btn-outline" style="color:#fb7185; border-color:rgba(244,63,94,0.3);" title="Wipe dummy/seeded incidents and start with a fresh clean workspace">
+          <span>🗑️</span> Clear Dummy Data
+        </button>
+        <button id="btn-load-demo" class="btn-outline" style="color:#38bdf8; border-color:rgba(56,189,248,0.3);" title="Restore production P0 demo incident dataset">
+          <span>⚡</span> Load Demo Data
+        </button>
+        <span id="severity-badge" class="status-tag critical">
+          <span class="status-dot"></span>
+          <span id="severity-text">P0 CRITICAL</span>
+        </span>
+        <a id="btn-download-pdf" class="btn-outline" href="#" target="_blank" title="Export incident post-mortem as PDF dossier">
+          <span>📄</span> PDF
+        </a>
+        <a id="btn-download-md" class="btn-outline" href="#" target="_blank" title="Export post-mortem in Markdown format">
+          <span>📝</span> MD
+        </a>
+      </div>
+    </header>
+
+    <!-- 2. Subnav Multi-Page Enterprise Tabs Bar -->
+    <nav class="subnav-tabs-bar">
+      <div class="subnav-tabs">
+        <a href="index.html" class="subnav-tab-btn" data-tab="tab-overview"><span>⚡</span> Executive Overview</a>
+        <a href="timeline.html" class="subnav-tab-btn" data-tab="tab-timeline"><span>🕒</span> Forensic Timeline</a>
+        <a href="rca.html" class="subnav-tab-btn active" data-tab="tab-rca"><span>🔍</span> 5-Whys Root Cause</a>
+        <a href="aiops-ml.html" class="subnav-tab-btn" data-tab="tab-aiops-ml"><span>🧠</span> Trained AIOps AI Models</a>
+        <a href="topology.html" class="subnav-tab-btn" data-tab="tab-topology"><span>🌐</span> Service Topology</a>
+        <a href="logs.html" class="subnav-tab-btn" data-tab="tab-logs"><span>📋</span> Telemetry Logs</a>
+        <a href="privacy.html" class="subnav-tab-btn" data-tab="tab-privacy"><span>🔒</span> Privacy & Security</a>
+        <a href="report.html" class="subnav-tab-btn" data-tab="tab-report"><span>📄</span> Post-Mortem Report</a>
+        <a href="benchmarks.html" class="subnav-tab-btn" data-tab="tab-benchmarks"><span>📊</span> Benchmarks</a>
+        <a href="forensic-matrix.html" class="subnav-tab-btn" data-tab="tab-forensic-matrix"><span>🧬</span> Forensic Matrix & Raw Data</a>
+        <a href="interactive-timeline.html" class="subnav-tab-btn" data-tab="tab-interactive-timeline"><span>⏱️</span> Interactive Timeline</a>
+        <a href="radar.html" class="subnav-tab-btn" data-tab="tab-radar"><span>📡</span> Multi-Task Radar</a>
+        <a href="causal-graph.html" class="subnav-tab-btn" data-tab="tab-causal-graph"><span>🕸️</span> Causal Graph & Impacts</a>
+        <a href="gis-damage.html" class="subnav-tab-btn" data-tab="tab-gis-damage"><span>🗺️</span> Damage Location / GIS</a>
+      </div>
+      <div class="subnav-right-meta">
+        <span class="status-indicator-live">●</span>
+        <span>Deterministic Python Sorter • 100% Grounded</span>
+      </div>
+    </nav>
+
+    <!-- 3. Main Content Scroll Area -->
+    <main class="main-content-scroll" id="main-content-scroll">
+      <!-- Enterprise Breadcrumb Context Header -->
+      <div class="enterprise-page-header">
+        <div class="page-breadcrumb">
+          <a href="index.html" class="breadcrumb-link">🛡️ AegisOps Enterprise</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current-incident" id="header-incident-badge">INC-2026-PAY-882</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-active-topic">🔍 Five-Tier Root Cause Analysis & Action Items</span>
+        </div>
+        <div style="font-size:11.5px; color:var(--text-tertiary); font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
+          <span>MNC Production Workspace</span>
+          <span>•</span>
+          <span style="color:#34d399;">● Online</span>
+        </div>
+      </div>
+
+<!-- ================================================================= -->
+      <!-- TAB 3: 5-WHYS & RCA -->
+      <!-- ================================================================= -->
+      <section id="tab-rca" class="tab-pane active" style="display:flex; flex-direction:column; gap:16px;">
+        <!-- 1. Executive Root Cause Analysis HUD Banner -->
+        <div class="content-panel" style="background:linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.85) 100%); border:1px solid rgba(168,85,247,0.3); box-shadow:0 8px 32px rgba(0,0,0,0.36);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:24px;">🔬</span>
+              <div>
+                <div style="font-size:16px; font-weight:700; color:#f8fafc; letter-spacing:-0.2px;">Five-Tier Root Cause Analysis (5-Whys Recursive Tree)</div>
+                <div style="font-size:12px; color:#94a3b8;">Multi-Agent causal chain connecting surface symptom down to fundamental root cause with zero hallucination.</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button id="btn-export-rca-json" class="btn-outline" style="font-size:11.5px; padding:6px 12px; color:#c084fc; border-color:rgba(192,132,252,0.3);" title="Export complete RCA analysis as JSON">
+                <span>📄</span> Export RCA JSON
+              </button>
+              <a href="timeline.html" class="btn-outline" style="font-size:11.5px; padding:6px 12px; text-decoration:none;" title="View chronological evidence on timeline">
+                <span>🕒</span> View Forensic Timeline &rarr;
+              </a>
+            </div>
+          </div>
+
+          <!-- Root Cause Conclusion Callout -->
+          <div style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3); border-left:4px solid #f43f5e; border-radius:8px; padding:14px 16px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge-pill" style="background:rgba(244,63,94,0.2); border-color:rgba(244,63,94,0.5); color:#fb7185; font-weight:700;">
+                  🎯 VERIFIED ROOT CAUSE
+                </span>
+                <span id="rca-status-badge" class="badge-pill" style="background:rgba(52,211,153,0.15); border-color:rgba(52,211,153,0.4); color:#34d399; font-weight:600;">
+                  ✔ Conclusive Finding
+                </span>
+              </div>
+              <div style="font-size:11.5px; color:#94a3b8; font-family:var(--font-mono);">
+                Empirical Confidence: <strong id="rca-confidence-score" style="color:#38bdf8;">95%</strong>
+              </div>
+            </div>
+            <div id="overview-root-cause" style="font-size:14px; font-weight:600; color:#f8fafc; line-height:1.5;">
+              Analyzing telemetry to synthesize 5-tier root cause...
+            </div>
+          </div>
+
+          <!-- RCA Metrics HUD Grid -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08);">
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px;">
+              <div style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:600;">Analysis Method</div>
+              <div style="font-size:14px; font-weight:700; color:#38bdf8; margin-top:2px;">5-Tier Recursive</div>
+              <div style="font-size:11px; color:#64748b;">Symptom &rarr; Root Cause</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px;">
+              <div style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:600;">Primary Subsystem</div>
+              <div id="rca-service-badge" style="font-size:13px; font-weight:700; color:#cbd5e1; font-family:var(--font-mono); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">--</div>
+              <div style="font-size:11px; color:#fbbf24;">Origin of Saturation</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px;">
+              <div style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:600;">Action Items</div>
+              <div id="action-items-kpi-count" style="font-size:18px; font-weight:700; color:#34d399; font-family:var(--font-mono); margin-top:2px;">--</div>
+              <div style="font-size:11px; color:#64748b;">Preventive &amp; Corrective</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px;">
+              <div style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:600;">Grounded Standard</div>
+              <div style="font-size:14px; font-weight:700; color:#a855f7; margin-top:2px;">100% Deterministic</div>
+              <div style="font-size:11px; color:#64748b;">Grounded to Telemetry Logs</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Two-Column Layout: 5-Whys Tree & Action Items -->
+        <div class="overview-layout-grid" style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:16px;">
+          <!-- Left Column: Five-Tier Causal Tree -->
+          <div class="content-panel">
+            <div class="panel-header-row">
+              <div class="panel-heading">
+                <span>🔍</span> Five-Tier Root Cause Causal Chain
+                <span class="badge-pill" style="margin-left:8px; background:rgba(168,85,247,0.1); border-color:rgba(168,85,247,0.3); color:#c084fc;">
+                  5 Tiers Grounded
+                </span>
+              </div>
+              <div style="font-size:11.5px; color:#64748b; font-family:var(--font-mono);">
+                <span>Causal Depth: 5 Steps</span>
+              </div>
+            </div>
+            <div class="panel-body-padded">
+              <div class="whys-chain-list" id="full-whys-chain">
+                <!-- Injected via app.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Action Items & Contributing Factors -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <!-- Action Items Panel -->
+            <div class="content-panel">
+              <div class="panel-header-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                  <div class="panel-heading">
+                    <span>🛡️</span> Action Items &amp; SLA Remediation
+                    <span id="action-items-count-badge" class="badge-pill" style="margin-left:8px; background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.3); color:#34d399;">--</span>
+                  </div>
+                </div>
+                <!-- Action Item Filter Chips -->
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding-top:4px;" id="action-filter-chips">
+                  <button class="timeline-phase-chip active" data-action-filter="all">All</button>
+                  <button class="timeline-phase-chip" data-action-filter="p0" style="color:#fb7185;">🔴 P0 Critical</button>
+                  <button class="timeline-phase-chip" data-action-filter="p1" style="color:#fbbf24;">🟡 P1 High</button>
+                  <button class="timeline-phase-chip" data-action-filter="preventive" style="color:#38bdf8;">🛡️ Preventive</button>
+                  <button class="timeline-phase-chip" data-action-filter="corrective" style="color:#34d399;">🛠️ Corrective</button>
+                </div>
+              </div>
+              <div class="panel-body-padded" id="action-items-container">
+                <!-- Injected via app.js -->
+              </div>
+            </div>
+
+            <!-- Contributing Factors Panel -->
+            <div class="content-panel">
+              <div class="panel-header-row">
+                <div class="panel-heading"><span>📋</span> Contributing Latent Factors</div>
+              </div>
+              <div class="panel-body-padded" id="rca-contributing-factors">
+                <!-- Injected via app.js -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<!-- Direct Telemetry File Upload Modal -->
+  <div id="modal-ingest-data" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:580px;">
+      <div class="modal-header">
+        <div class="panel-heading"><span>⚡</span> Telemetry File Upload &amp; Automated Analysis</div>
+        <button id="btn-close-ingest" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:14px;">
+          Target Incident Container: <strong id="ingest-target-incident-id" style="color:#38bdf8;">INC-...</strong>
+        </div>
+
+        <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">🤖</span>
+            <div>
+              <div style="font-size:12px; font-weight:600; color:#38bdf8;">Instant Multi-Agent AI Analysis</div>
+              <div style="font-size:11px; color:var(--text-tertiary);">PII redaction, event sorting, ML failure classification &amp; 5-Whys RCA run automatically.</div>
+            </div>
+          </div>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#34d399; cursor:pointer;">
+            <input type="checkbox" id="ingest-auto-analyze-toggle" checked style="accent-color:#10b981; width:16px; height:16px;">
+            Auto-Analyze
+          </label>
+        </div>
+
+        <label class="form-label">Telemetry Source Type</label>
+        <select id="ingest-source-type" class="select-box" style="width:100%; margin-bottom:14px;">
+          <option value="auto">✨ Auto-Detect from File (Recommended)</option>
+          <option value="slack">Slack / Teams Incident War Room Transcript</option>
+          <option value="datadog">Datadog / CloudWatch / Prometheus Monitoring Alarms</option>
+          <option value="jira">Jira Incident Ticket / SRE Triage Log</option>
+          <option value="log">Application &amp; Database System Log Stream</option>
+          <option value="cicd">GitHub Actions / CI-CD Deployment &amp; Rollback Events</option>
+        </select>
+
+        <!-- Direct File Upload Dropzone -->
+        <div id="ingest-dropzone" class="dropzone-container">
+          <div class="dropzone-icon">☁️</div>
+          <div class="dropzone-title">Drag &amp; Drop Telemetry File Here</div>
+          <div class="dropzone-subtitle">or <span class="dropzone-browse-btn">browse your computer</span></div>
+          <div class="dropzone-tags">
+            <span class="dropzone-tag">.LOG</span>
+            <span class="dropzone-tag">.JSON</span>
+            <span class="dropzone-tag">.CSV</span>
+            <span class="dropzone-tag">.TXT</span>
+            <span class="dropzone-tag">.MD</span>
+            <span class="dropzone-tag">.PDF</span>
+          </div>
+          <input type="file" id="ingest-file-input" style="display:none;" accept=".log,.txt,.json,.csv,.md,.pdf" />
+        </div>
+
+        <!-- File Selected Preview Card (Shown dynamically) -->
+        <div id="ingest-file-preview" class="file-preview-card" style="display:none;">
+          <div class="file-preview-left">
+            <div class="file-preview-icon">📄</div>
+            <div class="file-preview-details">
+              <div id="preview-file-name" class="file-preview-name">operational_log.txt</div>
+              <div class="file-preview-meta">
+                <span id="preview-file-size">142 KB</span>
+                <span>•</span>
+                <span id="preview-detected-type">Detected: Application Log</span>
+              </div>
+            </div>
+          </div>
+          <button id="btn-remove-selected-file" class="file-remove-btn" title="Remove selected file">&times;</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-ingest" class="btn-outline">Cancel</button>
+        <button id="btn-submit-ingest" class="btn-solid-green" disabled style="opacity:0.6; cursor:not-allowed;"><span>⚡</span> Upload &amp; Run Analysis</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- =====================================================================
+       AEGISOPS FORENSIC INTELLIGENCE COPILOT (AI CHATBOT WIDGET)
+       ===================================================================== -->
+  <div id="aegisops-chatbot-container" class="chatbot-widget-container">
+    <!-- Floating Trigger Pill Button -->
+    <button id="chatbot-toggle-pill" class="chatbot-floating-toggle aegisops-chatbot-toggle" title="Open AegisOps Forensic Intelligence Copilot">
+      <div class="chatbot-toggle-inner">
+        <span class="chatbot-icon">🤖</span>
+        <span class="chatbot-toggle-text">AegisOps Copilot</span>
+        <span class="live-dot-green"></span>
+      </div>
+    </button>
+
+    <!-- Glassmorphic Chat Window -->
+    <div id="chatbot-window-box" class="chatbot-window-box" style="display:none;">
+      <div class="chatbot-window-header">
+        <div class="chatbot-header-left">
+          <div class="chatbot-avatar">🛡️</div>
+          <div>
+            <div class="chatbot-header-title">AegisOps Forensic Copilot</div>
+            <div class="chatbot-header-status"><span class="status-dot online"></span> Dedicated Project Specialist AI</div>
+          </div>
+        </div>
+        <div class="chatbot-header-actions">
+          <button id="chatbot-btn-clear" class="chatbot-tool-btn" title="Clear conversation history">🗑️</button>
+          <button id="chatbot-btn-close" class="chatbot-tool-btn" title="Minimize Copilot">&times;</button>
+        </div>
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="chatbot-chips-bar" id="chatbot-chips-bar">
+        <button class="chat-chip" data-prompt="What is the verified root cause of this incident?" data-query="What is the verified root cause of this incident?">🔍 Root Cause</button>
+        <button class="chat-chip" data-prompt="Explain the 141k dataset data science profiling results" data-query="Explain the 141k dataset data science profiling results">📊 141k Dataset Analysis</button>
+        <button class="chat-chip" data-prompt="How does the deterministic sorter eliminate hallucinations?" data-query="How does the deterministic sorter eliminate hallucinations?">⚙️ Deterministic Sorter</button>
+        <button class="chat-chip" data-prompt="What are the top 5 failure categories?" data-query="What are the top 5 failure categories?">🎯 Top Failure Categories</button>
+        <button class="chat-chip" data-prompt="Explain the MTTR percentiles and SLA breach rate" data-query="Explain the MTTR percentiles and SLA breach rate">⏱️ MTTR &amp; SLA Breaches</button>
+        <button class="chat-chip" data-prompt="How does security &amp; PII redaction work?" data-query="How does security &amp; PII redaction work?">🔒 Security &amp; PII</button>
+      </div>
+
+      <!-- Chat Messages Scroll Area -->
+      <div class="chatbot-messages-scroll" id="chatbot-messages">
+        <div class="chat-msg bot bot-msg">
+          <div class="chat-msg-avatar">🤖</div>
+          <div class="chat-msg-bubble">
+            Hello! I am the <strong>AegisOps Forensic Intelligence Copilot</strong>. I am trained exclusively on this project's 10-step multi-agent architecture, deterministic temporal sorting, forensic RCA, and dataset profiling (100k-300k+ records).<br><br>
+            Ask me anything about this incident's root cause, SLA breach analysis, telemetry data, or system architecture!
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chatbot-input-row">
+        <input type="text" id="chatbot-input" class="chatbot-text-field" placeholder="Ask about this incident, root cause, dataset or architecture..." autocomplete="off" />
+        <button id="chatbot-btn-send" class="chatbot-send-btn" title="Send Question"><span>➤</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

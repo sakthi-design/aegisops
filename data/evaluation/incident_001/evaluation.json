@@ -1,0 +1,12 @@
+{
+  "incident": "incident_001",
+  "timeline_ordering_accuracy": 1.0,
+  "groundedness_score": 1.0,
+  "unsupported_claim_rate": 0.0,
+  "hallucination_rate": 0.0,
+  "critic_audit_passed": true,
+  "events_count": 19,
+  "conflicts_count": 0,
+  "mttd": "0m 0s",
+  "mttr": "30m 0s"
+}

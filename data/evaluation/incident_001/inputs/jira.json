@@ -1,0 +1,10 @@
+{
+  "key": "OPS-INCIDENT_001",
+  "fields": {
+    "summary": "Emergency Outage on order-service",
+    "priority": "P1",
+    "created": "2026-09-25T10:02:00Z",
+    "resolutiondate": "2026-09-25T10:32:00Z",
+    "description": "Customer degradation reported on order-service. Responders mitigated via rollback."
+  }
+}

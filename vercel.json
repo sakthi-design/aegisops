@@ -1,0 +1,95 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "frontend/public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/docs",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/openapi.json",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/frontend/public/$1"
+    },
+    {
+      "src": "/timeline",
+      "dest": "/frontend/public/timeline.html"
+    },
+    {
+      "src": "/report",
+      "dest": "/frontend/public/report.html"
+    },
+    {
+      "src": "/rca",
+      "dest": "/frontend/public/rca.html"
+    },
+    {
+      "src": "/topology",
+      "dest": "/frontend/public/topology.html"
+    },
+    {
+      "src": "/logs",
+      "dest": "/frontend/public/logs.html"
+    },
+    {
+      "src": "/privacy",
+      "dest": "/frontend/public/privacy.html"
+    },
+    {
+      "src": "/benchmarks",
+      "dest": "/frontend/public/benchmarks.html"
+    },
+    {
+      "src": "/forensic-matrix",
+      "dest": "/frontend/public/forensic-matrix.html"
+    },
+    {
+      "src": "/interactive-timeline",
+      "dest": "/frontend/public/interactive-timeline.html"
+    },
+    {
+      "src": "/radar",
+      "dest": "/frontend/public/radar.html"
+    },
+    {
+      "src": "/causal-graph",
+      "dest": "/frontend/public/causal-graph.html"
+    },
+    {
+      "src": "/gis-damage",
+      "dest": "/frontend/public/gis-damage.html"
+    },
+    {
+      "src": "/aiops-ml",
+      "dest": "/frontend/public/aiops-ml.html"
+    },
+    {
+      "src": "/(.*)\\.html",
+      "dest": "/frontend/public/$1.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/public/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/frontend/public/index.html"
+    }
+  ]
+}

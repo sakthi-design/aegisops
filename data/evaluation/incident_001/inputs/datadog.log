@@ -1,0 +1,4 @@
+2026-09-25T10:01:00Z [ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)
+2026-09-25T10:04:30Z [WARN] datadog: Host memory saturation on order-service-worker-pod-8 reached 91%
+2026-09-25T10:21:00Z [INFO] datadog: Deployment rollback event received for order-service
+2026-09-25T10:31:00Z [RESOLVED] datadog: order-service HTTP 5xx error rate back within normal baseline (<0.01%)

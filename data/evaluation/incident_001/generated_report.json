@@ -1,0 +1,411 @@
+{
+  "section_01_executive_summary": "On 2026-09-25T10:01:00Z, an incident titled 'Evaluation Outage incident_001' occurred with severity P2. Degradation across 2 microservices (order-service, order-service-worker). Active incident duration observed: 30.0 minutes. The incident was mitigated following targeted response actions. Determined root cause: Degradation initiated by order-service: [ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)",
+  "section_02_incident_metadata": {
+    "incident_id": "EVAL-incident_001",
+    "title": "Evaluation Outage incident_001",
+    "severity": "P2",
+    "total_events_analyzed": 19,
+    "conflicts_detected": 0,
+    "is_conclusive_rca": true
+  },
+  "section_03_severity": {
+    "level": "P2",
+    "affected_services": [
+      "order-service",
+      "order-service-worker"
+    ],
+    "sla_breached": true
+  },
+  "section_04_business_customer_impact": {
+    "summary": "Degradation across 2 microservices (order-service, order-service-worker). Active incident duration observed: 30.0 minutes.",
+    "regions": [
+      "Primary Production Region"
+    ],
+    "failed_requests": "Impact metric unavailable from supplied telemetry.",
+    "revenue_impact": "Impact metric unavailable from supplied telemetry.",
+    "duration_minutes": 30.0
+  },
+  "section_05_mttd": {
+    "seconds": 0.0,
+    "formatted": "0m 0s",
+    "detection_time_utc": "2026-09-25T10:01:00Z"
+  },
+  "section_06_mttr": {
+    "seconds": 1800.0,
+    "formatted": "30m 0s",
+    "resolution_time_utc": "2026-09-25T10:31:00Z"
+  },
+  "section_07_timeline": [
+    {
+      "event_id": "EVT-001",
+      "timestamp_utc": "2026-09-25T10:01:00Z",
+      "actor": "system",
+      "service": "order-service",
+      "action": "[ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)",
+      "severity": "error",
+      "phase": "Detection",
+      "quote": "2026-09-25T10:01:00Z [ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)"
+    },
+    {
+      "event_id": "EVT-002",
+      "timestamp_utc": "2026-09-25T10:04:30Z",
+      "actor": "system",
+      "service": "order-service-worker",
+      "action": "[WARN] datadog: Host memory saturation on order-service-worker-pod-8 reached 91%",
+      "severity": "warning",
+      "phase": "Triage",
+      "quote": "2026-09-25T10:04:30Z [WARN] datadog: Host memory saturation on order-service-worker-pod-8 reached 91%"
+    },
+    {
+      "event_id": "EVT-003",
+      "timestamp_utc": "2026-09-25T10:21:00Z",
+      "actor": "system",
+      "service": "order-service",
+      "action": "[INFO] datadog: Deployment rollback event received for order-service",
+      "severity": "info",
+      "phase": "Mitigation",
+      "quote": "2026-09-25T10:21:00Z [INFO] datadog: Deployment rollback event received for order-service"
+    },
+    {
+      "event_id": "EVT-004",
+      "timestamp_utc": "2026-09-25T10:31:00Z",
+      "actor": "system",
+      "service": "order-service",
+      "action": "[RESOLVED] datadog: order-service HTTP 5xx error rate back within normal baseline (<0.01%)",
+      "severity": "error",
+      "phase": "Resolution",
+      "quote": "2026-09-25T10:31:00Z [RESOLVED] datadog: order-service HTTP 5xx error rate back within normal baseline (<0.01%)"
+    },
+    {
+      "event_id": "EVT-005",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"key\": \"OPS-INCIDENT_001\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"key\": \"OPS-INCIDENT_001\","
+    },
+    {
+      "event_id": "EVT-006",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "order-service",
+      "action": "\"summary\": \"Emergency Outage on order-service\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"summary\": \"Emergency Outage on order-service\","
+    },
+    {
+      "event_id": "EVT-007",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"priority\": \"P1\",",
+      "severity": "error",
+      "phase": "Triage",
+      "quote": "\"priority\": \"P1\","
+    },
+    {
+      "event_id": "EVT-008",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"created\": \"2026-09-25T10:02:00Z\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"created\": \"2026-09-25T10:02:00Z\","
+    },
+    {
+      "event_id": "EVT-009",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"resolutiondate\": \"2026-09-25T10:32:00Z\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"resolutiondate\": \"2026-09-25T10:32:00Z\","
+    },
+    {
+      "event_id": "EVT-010",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "order-service",
+      "action": "\"description\": \"Customer degradation reported on order-service. Responders mitigated via rollback.\"",
+      "severity": "info",
+      "phase": "Mitigation",
+      "quote": "\"description\": \"Customer degradation reported on order-service. Responders mitigated via rollback.\""
+    },
+    {
+      "event_id": "EVT-011",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"channel\": \"#incident-war-room\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"channel\": \"#incident-war-room\","
+    },
+    {
+      "event_id": "EVT-012",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"timestamp\": \"2026-09-25T10:00:00Z\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"timestamp\": \"2026-09-25T10:00:00Z\","
+    },
+    {
+      "event_id": "EVT-013",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "channel",
+      "service": "order-service",
+      "action": "\"text\": \"@channel We are receiving high error alarms on order-service.\"",
+      "severity": "error",
+      "phase": "Detection",
+      "quote": "\"text\": \"@channel We are receiving high error alarms on order-service.\""
+    },
+    {
+      "event_id": "EVT-014",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"timestamp\": \"2026-09-25T10:05:00Z\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"timestamp\": \"2026-09-25T10:05:00Z\","
+    },
+    {
+      "event_id": "EVT-015",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "order-service",
+      "action": "\"text\": \"Looking at logs for order-service. Seeing memory pressure and container restarts.\"",
+      "severity": "info",
+      "phase": "Mitigation",
+      "quote": "\"text\": \"Looking at logs for order-service. Seeing memory pressure and container restarts.\""
+    },
+    {
+      "event_id": "EVT-016",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"timestamp\": \"2026-09-25T10:20:00Z\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"timestamp\": \"2026-09-25T10:20:00Z\","
+    },
+    {
+      "event_id": "EVT-017",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "order-service",
+      "action": "\"text\": \"Executing rollback on order-service to previous stable artifact.\"",
+      "severity": "info",
+      "phase": "Mitigation",
+      "quote": "\"text\": \"Executing rollback on order-service to previous stable artifact.\""
+    },
+    {
+      "event_id": "EVT-018",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "unspecified",
+      "action": "\"timestamp\": \"2026-09-25T10:30:00Z\",",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"timestamp\": \"2026-09-25T10:30:00Z\","
+    },
+    {
+      "event_id": "EVT-019",
+      "timestamp_utc": "UNANCHORED_EVENT",
+      "actor": "system",
+      "service": "order-service",
+      "action": "\"text\": \"Service order-service stabilized. Health checks passing.\"",
+      "severity": "info",
+      "phase": "Triage",
+      "quote": "\"text\": \"Service order-service stabilized. Health checks passing.\""
+    }
+  ],
+  "section_08_detection_phase": [
+    "[ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)",
+    "\"text\": \"@channel We are receiving high error alarms on order-service.\""
+  ],
+  "section_09_triage_phase": [
+    "[WARN] datadog: Host memory saturation on order-service-worker-pod-8 reached 91%",
+    "\"key\": \"OPS-INCIDENT_001\",",
+    "\"summary\": \"Emergency Outage on order-service\",",
+    "\"priority\": \"P1\",",
+    "\"created\": \"2026-09-25T10:02:00Z\",",
+    "\"resolutiondate\": \"2026-09-25T10:32:00Z\",",
+    "\"channel\": \"#incident-war-room\",",
+    "\"timestamp\": \"2026-09-25T10:00:00Z\",",
+    "\"timestamp\": \"2026-09-25T10:05:00Z\",",
+    "\"timestamp\": \"2026-09-25T10:20:00Z\",",
+    "\"timestamp\": \"2026-09-25T10:30:00Z\",",
+    "\"text\": \"Service order-service stabilized. Health checks passing.\""
+  ],
+  "section_10_mitigation_phase": [
+    "[INFO] datadog: Deployment rollback event received for order-service",
+    "\"description\": \"Customer degradation reported on order-service. Responders mitigated via rollback.\"",
+    "\"text\": \"Looking at logs for order-service. Seeing memory pressure and container restarts.\"",
+    "\"text\": \"Executing rollback on order-service to previous stable artifact.\""
+  ],
+  "section_11_resolution_phase": [
+    "[RESOLVED] datadog: order-service HTTP 5xx error rate back within normal baseline (<0.01%)"
+  ],
+  "section_12_root_cause": "Degradation initiated by order-service: [ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)",
+  "section_13_5_whys": [
+    {
+      "step": 1,
+      "why": "Why did the system degrade?",
+      "answer": "An operational fault occurred in order-service (EVT-001).",
+      "supporting_event_id": "EVT-001",
+      "confidence": 1.0
+    },
+    {
+      "step": 2,
+      "why": "Why was the fault not immediately isolated?",
+      "answer": "Cascading requests accumulated before mitigation actions took effect.",
+      "supporting_event_id": "EVT-001",
+      "confidence": 1.0
+    }
+  ],
+  "section_14_contributing_factors": [
+    "Cascading dependency failure",
+    "Delayed threshold alerting"
+  ],
+  "section_15_what_went_well": [
+    "Rapid detection: MTTD was 0m 0s within SLA threshold.",
+    "Engineers executed active mitigation (4 mitigation actions recorded)."
+  ],
+  "section_16_what_went_wrong": [
+    "Initial monitoring alarms did not isolate database thread exhaustion prior to cascade."
+  ],
+  "section_17_corrective_actions": [
+    {
+      "task": "Implement automated canary rollback triggered on HTTP 5xx error rate exceeding 1.0% over a 3-minute evaluation window.",
+      "owner_role": "DevOps & Release Engineering",
+      "priority": "P0 - Immediate Hotfix",
+      "deadline": "48 Hours",
+      "success_metric": "Canary deployments automatically abort without manual engineer intervention.",
+      "evidence_basis": [
+        "EVT-001",
+        "EVT-004",
+        "EVT-007",
+        "EVT-013"
+      ]
+    }
+  ],
+  "section_18_preventive_actions": [
+    {
+      "task": "Audit deployment pre-flight health checks and establish strict synthetic smoke test verification step before traffic cutover.",
+      "owner_role": "Quality Assurance & SRE",
+      "priority": "P1 - Short-Term Hardening",
+      "deadline": "14 Days",
+      "success_metric": "Smoke test suite validates all critical user journeys prior to 100% routing.",
+      "evidence_basis": [
+        "EVT-001",
+        "EVT-004",
+        "EVT-007",
+        "EVT-013"
+      ]
+    }
+  ],
+  "section_19_evidence_references": [
+    {
+      "event_id": "EVT-001",
+      "source": "datadog",
+      "quote": "2026-09-25T10:01:00Z [ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)"
+    },
+    {
+      "event_id": "EVT-002",
+      "source": "datadog",
+      "quote": "2026-09-25T10:04:30Z [WARN] datadog: Host memory saturation on order-service-worker-pod-8 reached 91%"
+    },
+    {
+      "event_id": "EVT-003",
+      "source": "datadog",
+      "quote": "2026-09-25T10:21:00Z [INFO] datadog: Deployment rollback event received for order-service"
+    },
+    {
+      "event_id": "EVT-004",
+      "source": "datadog",
+      "quote": "2026-09-25T10:31:00Z [RESOLVED] datadog: order-service HTTP 5xx error rate back within normal baseline (<0.01%)"
+    },
+    {
+      "event_id": "EVT-005",
+      "source": "jira",
+      "quote": "\"key\": \"OPS-INCIDENT_001\","
+    },
+    {
+      "event_id": "EVT-006",
+      "source": "jira",
+      "quote": "\"summary\": \"Emergency Outage on order-service\","
+    },
+    {
+      "event_id": "EVT-007",
+      "source": "jira",
+      "quote": "\"priority\": \"P1\","
+    },
+    {
+      "event_id": "EVT-008",
+      "source": "jira",
+      "quote": "\"created\": \"2026-09-25T10:02:00Z\","
+    },
+    {
+      "event_id": "EVT-009",
+      "source": "jira",
+      "quote": "\"resolutiondate\": \"2026-09-25T10:32:00Z\","
+    },
+    {
+      "event_id": "EVT-010",
+      "source": "jira",
+      "quote": "\"description\": \"Customer degradation reported on order-service. Responders mitigated via rollback.\""
+    },
+    {
+      "event_id": "EVT-011",
+      "source": "slack",
+      "quote": "\"channel\": \"#incident-war-room\","
+    },
+    {
+      "event_id": "EVT-012",
+      "source": "slack",
+      "quote": "\"timestamp\": \"2026-09-25T10:00:00Z\","
+    },
+    {
+      "event_id": "EVT-013",
+      "source": "slack",
+      "quote": "\"text\": \"@channel We are receiving high error alarms on order-service.\""
+    },
+    {
+      "event_id": "EVT-014",
+      "source": "slack",
+      "quote": "\"timestamp\": \"2026-09-25T10:05:00Z\","
+    },
+    {
+      "event_id": "EVT-015",
+      "source": "slack",
+      "quote": "\"text\": \"Looking at logs for order-service. Seeing memory pressure and container restarts.\""
+    }
+  ],
+  "section_20_confidence_uncertainty": {
+    "confidence_score": 0.88,
+    "evidence_count": 19,
+    "conflicts_count": 0,
+    "claims": [
+      {
+        "claim_id": "CLM-RCA-02",
+        "claim_text": "Degradation initiated by order-service: [ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)",
+        "claim_type": "INFERRED_CONCLUSION",
+        "confidence_score": 0.88,
+        "supporting_event_ids": [
+          "EVT-001"
+        ],
+        "supporting_evidence_quotes": [
+          "2026-09-25T10:01:00Z [ALERT] datadog: order-service HTTP 5xx error rate breached 5% threshold (currently 12.4%)"
+        ]
+      }
+    ]
+  }
+}

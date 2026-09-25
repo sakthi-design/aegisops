@@ -1,0 +1,25 @@
+{
+  "channel": "#incident-war-room",
+  "messages": [
+    {
+      "timestamp": "2026-09-25T10:00:00Z",
+      "user": "sre_alex",
+      "text": "@channel We are receiving high error alarms on order-service."
+    },
+    {
+      "timestamp": "2026-09-25T10:05:00Z",
+      "user": "eng_dev",
+      "text": "Looking at logs for order-service. Seeing memory pressure and container restarts."
+    },
+    {
+      "timestamp": "2026-09-25T10:20:00Z",
+      "user": "sre_alex",
+      "text": "Executing rollback on order-service to previous stable artifact."
+    },
+    {
+      "timestamp": "2026-09-25T10:30:00Z",
+      "user": "sre_alex",
+      "text": "Service order-service stabilized. Health checks passing."
+    }
+  ]
+}

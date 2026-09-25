@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[project]
+name = "automated-incident-narrative-synthesis"
+version = "1.0.0"
+description = "Enterprise Multi-Agent Incident Intelligence Platform"
+requires-python = ">=3.11"

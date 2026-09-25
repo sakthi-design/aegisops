@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisOps — Incident Intelligence & Forensic Reconstruction</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 1. Header Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-badge" id="brand-home">
+          <div class="brand-icon">🛡️</div>
+          <div class="brand-name">AegisOps</div>
+        </div>
+        <div class="header-divider"></div>
+        <div class="incident-picker">
+          <select id="incident-select" class="select-box" title="Select Incident"></select>
+          <span id="incident-title" class="incident-title-label">Loading incident...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="btn-open-ingest" class="btn-solid-green" title="Upload telemetry file (runs automated AI multi-agent analysis)">
+          <span>⚡</span> Upload &amp; Auto-Analyze
+        </button>
+        <button id="btn-reprocess" class="btn-outline" title="Re-run multi-agent synthesis & ML pipeline on current data">
+          <span>▶</span> Re-run Pipeline
+        </button>
+        <button id="btn-clear-dummy" class="btn-outline" style="color:#fb7185; border-color:rgba(244,63,94,0.3);" title="Wipe dummy/seeded incidents and start with a fresh clean workspace">
+          <span>🗑️</span> Clear Dummy Data
+        </button>
+        <button id="btn-load-demo" class="btn-outline" style="color:#38bdf8; border-color:rgba(56,189,248,0.3);" title="Restore production P0 demo incident dataset">
+          <span>⚡</span> Load Demo Data
+        </button>
+        <span id="severity-badge" class="status-tag critical">
+          <span class="status-dot"></span>
+          <span id="severity-text">P0 CRITICAL</span>
+        </span>
+        <a id="btn-download-pdf" class="btn-outline" href="#" target="_blank" title="Export incident post-mortem as PDF dossier">
+          <span>📄</span> PDF
+        </a>
+        <a id="btn-download-md" class="btn-outline" href="#" target="_blank" title="Export post-mortem in Markdown format">
+          <span>📝</span> MD
+        </a>
+      </div>
+    </header>
+
+    <!-- 2. Subnav Multi-Page Enterprise Tabs Bar -->
+    <nav class="subnav-tabs-bar">
+      <div class="subnav-tabs">
+        <a href="index.html" class="subnav-tab-btn active" data-tab="tab-overview"><span>⚡</span> Executive Overview</a>
+        <a href="timeline.html" class="subnav-tab-btn" data-tab="tab-timeline"><span>🕒</span> Forensic Timeline</a>
+        <a href="rca.html" class="subnav-tab-btn" data-tab="tab-rca"><span>🔍</span> 5-Whys Root Cause</a>
+        <a href="aiops-ml.html" class="subnav-tab-btn" data-tab="tab-aiops-ml"><span>🧠</span> Trained AIOps AI Models</a>
+        <a href="topology.html" class="subnav-tab-btn" data-tab="tab-topology"><span>🌐</span> Service Topology</a>
+        <a href="logs.html" class="subnav-tab-btn" data-tab="tab-logs"><span>📋</span> Telemetry Logs</a>
+        <a href="privacy.html" class="subnav-tab-btn" data-tab="tab-privacy"><span>🔒</span> Privacy & Security</a>
+        <a href="report.html" class="subnav-tab-btn" data-tab="tab-report"><span>📄</span> Post-Mortem Report</a>
+        <a href="benchmarks.html" class="subnav-tab-btn" data-tab="tab-benchmarks"><span>📊</span> Benchmarks</a>
+        <a href="forensic-matrix.html" class="subnav-tab-btn" data-tab="tab-forensic-matrix"><span>🧬</span> Forensic Matrix & Raw Data</a>
+        <a href="interactive-timeline.html" class="subnav-tab-btn" data-tab="tab-interactive-timeline"><span>⏱️</span> Interactive Timeline</a>
+        <a href="radar.html" class="subnav-tab-btn" data-tab="tab-radar"><span>📡</span> Multi-Task Radar</a>
+        <a href="causal-graph.html" class="subnav-tab-btn" data-tab="tab-causal-graph"><span>🕸️</span> Causal Graph & Impacts</a>
+        <a href="gis-damage.html" class="subnav-tab-btn" data-tab="tab-gis-damage"><span>🗺️</span> Damage Location / GIS</a>
+      </div>
+      <div class="subnav-right-meta">
+        <span class="status-indicator-live">●</span>
+        <span>Deterministic Python Sorter • 100% Grounded</span>
+      </div>
+    </nav>
+
+    <!-- 3. Main Content Scroll Area -->
+    <main class="main-content-scroll" id="main-content-scroll">
+      <!-- Enterprise Breadcrumb Context Header -->
+      <div class="enterprise-page-header">
+        <div class="page-breadcrumb">
+          <a href="index.html" class="breadcrumb-link">🛡️ AegisOps Enterprise</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current-incident" id="header-incident-badge">INC-2026-PAY-882</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-active-topic">⚡ Executive Overview & Narrative Synthesis</span>
+        </div>
+        <div style="font-size:11.5px; color:var(--text-tertiary); font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
+          <span>MNC Production Workspace</span>
+          <span>•</span>
+          <span style="color:#34d399;">● Online</span>
+        </div>
+      </div>
+
+<!-- ================================================================= -->
+      <!-- TAB 1: EXECUTIVE OVERVIEW -->
+      <!-- ================================================================= -->
+      <section id="tab-overview" class="tab-pane active" style="display:flex;">
+        <!-- 3.1 Executive Story & Stepper Banner -->
+        <div class="executive-brief-card">
+        <div class="brief-top-row">
+          <div class="brief-text-block">
+            <div class="brief-icon">⚡</div>
+            <div>
+              <div class="brief-title" id="brief-title">Automated Incident Narrative Synthesis</div>
+              <div class="brief-desc" id="brief-desc">Forensic multi-source telemetry aggregated across Slack, Datadog alerts, Jira tickets, and application logs.</div>
+            </div>
+          </div>
+          <div id="brief-actions">
+            <button id="btn-quick-sign" class="btn-solid-green">Sign-Off Incident</button>
+          </div>
+        </div>
+
+        <!-- Lifecycle Stepper -->
+        <div class="resolution-stepper">
+          <a href="timeline.html" class="stepper-node" style="text-decoration:none; color:inherit;" title="Jump to Detection in Forensic Timeline">
+            <div class="node-circle">1</div>
+            <div class="node-meta">
+              <span class="node-title">Detection Alert</span>
+              <span class="node-timestamp" id="step-detect-time">14:01 UTC</span>
+            </div>
+          </a>
+          <div class="stepper-connector"></div>
+          <a href="timeline.html" class="stepper-node" style="text-decoration:none; color:inherit;" title="Jump to Triage in Forensic Timeline">
+            <div class="node-circle">2</div>
+            <div class="node-meta">
+              <span class="node-title">Triage Inception</span>
+              <span class="node-timestamp" id="step-triage-time">14:04 UTC</span>
+            </div>
+          </a>
+          <div class="stepper-connector"></div>
+          <a href="timeline.html" class="stepper-node" style="text-decoration:none; color:inherit;" title="Jump to Mitigation in Forensic Timeline">
+            <div class="node-circle">3</div>
+            <div class="node-meta">
+              <span class="node-title">Mitigation Rollback</span>
+              <span class="node-timestamp" id="step-mitigate-time">14:20 UTC</span>
+            </div>
+          </a>
+          <div class="stepper-connector"></div>
+          <a href="timeline.html" class="stepper-node" style="text-decoration:none; color:inherit;" title="Jump to Resolution in Forensic Timeline">
+            <div class="node-circle">4</div>
+            <div class="node-meta">
+              <span class="node-title">Health Restored</span>
+              <span class="node-timestamp" id="step-resolve-time">14:25 UTC</span>
+            </div>
+          </a>
+          <div class="stepper-connector"></div>
+          <a href="report.html" class="stepper-node" style="text-decoration:none; color:inherit;" title="View Certified Audit Post-Mortem">
+            <div class="node-circle" id="node-audit-circle">✓</div>
+            <div class="node-meta">
+              <span class="node-title">Audited &amp; Signed</span>
+              <span class="node-timestamp" id="step-audit-time">Audited</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- 3.2 KPI Metrics Row -->
+      <div class="kpi-metrics-grid">
+        <a href="benchmarks.html" class="kpi-box" style="text-decoration:none; color:inherit;" title="Click to view full latency & MTTD benchmarks">
+          <div class="kpi-label-row">
+            <span>MTTD (Detection)</span>
+            <span>⏱️</span>
+          </div>
+          <div class="kpi-val" id="kpi-mttd">--</div>
+          <div class="kpi-sub" id="kpi-mttd-sub">Time from breach to alert</div>
+        </a>
+        <a href="timeline.html" class="kpi-box" style="text-decoration:none; color:inherit;" title="Click to view chronological resolution phases">
+          <div class="kpi-label-row">
+            <span>MTTR (Resolution)</span>
+            <span>🛠️</span>
+          </div>
+          <div class="kpi-val" id="kpi-mttr">--</div>
+          <div class="kpi-sub" id="kpi-mttr-sub">Total time to stabilize</div>
+        </a>
+        <a href="timeline.html" class="kpi-box" style="text-decoration:none; color:inherit;" title="Click to inspect active outage duration on timeline">
+          <div class="kpi-label-row">
+            <span>Duration</span>
+            <span>⏳</span>
+          </div>
+          <div class="kpi-val" id="kpi-duration">--</div>
+          <div class="kpi-sub" id="kpi-duration-sub">Active outage window</div>
+        </a>
+        <a href="forensic-matrix.html" class="kpi-box" style="text-decoration:none; color:inherit;" title="Click to inspect all sorted dataset records in Forensic Matrix">
+          <div class="kpi-label-row">
+            <span>Events Analyzed</span>
+            <span>📑</span>
+          </div>
+          <div class="kpi-val" id="kpi-events">--</div>
+          <div class="kpi-sub" id="kpi-events-sub">Sorted deterministically</div>
+        </a>
+        <a href="benchmarks.html" class="kpi-box" style="text-decoration:none; color:inherit;" title="Click to view grounded factual accuracy proofs">
+          <div class="kpi-label-row">
+            <span>Grounded Confidence</span>
+            <span>🎯</span>
+          </div>
+          <div class="kpi-val" id="kpi-confidence">98%</div>
+          <div class="kpi-sub" id="kpi-confidence-sub">Zero hallucination proof</div>
+        </a>
+        <a href="forensic-matrix.html" class="kpi-box" id="kpi-box-alerts" style="text-decoration:none; color:inherit; border-left: 3px solid #f43f5e;" title="Click to view critical alerts in Forensic Matrix">
+          <div class="kpi-label-row">
+            <span>Critical / High Alerts</span>
+            <span class="live-pulse-badge" style="display:inline-flex; align-items:center; gap:4px; font-size:10px; color:#fb7185; font-weight:700;"><span class="status-dot critical"></span> LIVE</span>
+          </div>
+          <div class="kpi-val" id="kpi-alerts-count" style="color: #fb7185;">24</div>
+          <div class="kpi-sub" id="kpi-alerts-sub">18 Critical • 6 High • 3 Predicted Failures</div>
+        </a>
+      </div>
+
+      <!-- 3.3 Live Multi-Sensor Telemetry Stream & Digital Oscilloscope Diagnostics Center -->
+      <div class="live-telemetry-console-card">
+        <div class="console-header-row">
+          <div class="console-title-wrap">
+            <span class="pulse-indicator"></span>
+            <div>
+              <div class="console-title">REAL-TIME MULTI-SENSOR TELEMETRY &amp; LIVE OSCILLOSCOPE</div>
+              <div class="console-sub">50Hz Sensor Stream • Dual-Beam Anomaly Waveform Sweep • Live Subsystem Damage Conditions</div>
+            </div>
+          </div>
+          <div class="console-controls-wrap">
+            <div class="scope-ch-toggles">
+              <button class="scope-btn active" data-ch="all">ALL TRACES</button>
+              <button class="scope-btn" data-ch="ch1">CH1 LATENCY</button>
+              <button class="scope-btn" data-ch="ch2">CH2 ANOMALY</button>
+              <button class="scope-btn" data-ch="ch3">CH3 BASELINE</button>
+            </div>
+            <div class="scope-speed-wrap">
+              <span style="font-size:11px; color:var(--text-secondary); font-family:var(--font-mono); font-weight:600;">SWEEP:</span>
+              <button class="speed-btn active" data-speed="1">1X</button>
+              <button class="speed-btn" data-speed="2">2X</button>
+              <button class="speed-btn" data-speed="5">5X</button>
+              <button id="btn-scope-pause" class="speed-btn pause-toggle" title="Pause or Resume Waveform Stream">⏸ PAUSE</button>
+              <a href="radar.html" class="speed-btn" style="text-decoration:none; color:#38bdf8; display:inline-flex; align-items:center; gap:4px;" title="Open Dedicated Multi-Task Radar Page"><span>📡</span> Radar &rarr;</a>
+              <a href="logs.html" class="speed-btn" style="text-decoration:none; color:#34d399; display:inline-flex; align-items:center; gap:4px;" title="Open Telemetry Logs Page"><span>📋</span> Logs &rarr;</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="console-grid-three-col">
+          <!-- Column 1: Live Hardware / Digital Oscilloscope Screen -->
+          <div class="oscilloscope-screen-panel">
+            <div class="scope-screen-top-hud">
+              <div class="hud-item"><span class="hud-label">TIME/DIV:</span> <span class="hud-val" id="scope-time-div">10 ms</span></div>
+              <div class="hud-item"><span class="hud-label">VOLTS/DIV:</span> <span class="hud-val">500 mV</span></div>
+              <div class="hud-item"><span class="hud-label">FREQ:</span> <span class="hud-val" id="scope-freq">49.8 Hz</span></div>
+              <div class="hud-item"><span class="hud-label">JITTER P-P:</span> <span class="hud-val" id="scope-vpp" style="color:#38bdf8;">14.2 ms</span></div>
+              <div class="hud-item"><span class="hud-label">STATUS:</span> <span class="hud-val" style="color:#10b981;">AUTO-LOCKED</span></div>
+            </div>
+            <div class="scope-canvas-container">
+              <canvas id="telemetry-oscilloscope" width="600" height="210"></canvas>
+              <div class="scope-crosshairs"></div>
+            </div>
+            <div class="scope-legend-row">
+              <span class="legend-dot" style="background:#38bdf8; box-shadow:0 0 8px #38bdf8;"></span> <span style="color:#38bdf8; font-weight:600; font-size:11px;">CH1: API Latency &amp; Jitter</span>
+              <span class="legend-dot" style="background:#f43f5e; box-shadow:0 0 8px #f43f5e; margin-left:14px;"></span> <span style="color:#f43f5e; font-weight:600; font-size:11px;">CH2: Failure Anomaly Pulse</span>
+              <span class="legend-dot" style="background:#10b981; box-shadow:0 0 8px #10b981; margin-left:14px;"></span> <span style="color:#10b981; font-weight:600; font-size:11px;">CH3: Nominal Baseline</span>
+            </div>
+          </div>
+
+          <!-- Column 2: Real-Time Multi-Sensor Telemetry Stream -->
+          <div class="telemetry-stream-panel">
+            <div class="stream-panel-header">
+              <div style="font-weight:700; font-size:12px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                <span class="live-dot-green"></span> MULTI-SENSOR INGESTION BUS
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <a href="interactive-timeline.html" class="badge-pill" style="text-decoration:none; font-family:var(--font-mono); font-size:10px; color:#38bdf8; border-color:rgba(56,189,248,0.3);">⏱️ SCRUBBER &rarr;</a>
+              </div>
+            </div>
+            <div class="telemetry-stream-feed" id="telemetry-live-feed">
+              <!-- Dynamically populated streaming micro-ticker items via app.js -->
+            </div>
+          </div>
+
+          <!-- Column 3: Live Subsystem Damage Conditions & Predicted Failures -->
+          <div class="damage-conditions-panel">
+            <div class="stream-panel-header">
+              <div style="font-weight:700; font-size:12px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                <span>🛡️</span> SUBSYSTEM DAMAGE
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <a href="causal-graph.html" class="badge-pill" style="text-decoration:none; color:#a855f7; border-color:rgba(168,85,247,0.3); font-size:10px;">🕸️ GRAPH &rarr;</a>
+                <a href="gis-damage.html" class="badge-pill" style="text-decoration:none; color:#38bdf8; border-color:rgba(56,189,248,0.3); font-size:10px;">🗺️ GIS &rarr;</a>
+              </div>
+            </div>
+            
+            <div class="damage-meters-list" id="damage-meters-container">
+              <!-- Dynamically populated damage condition bars via app.js -->
+            </div>
+
+            <!-- Predicted Failure Horizon Alert Box -->
+            <div class="predicted-failure-box" id="predicted-failure-box">
+              <div class="failure-header">
+                <span class="pulse-warning">⚠️</span>
+                <strong>PREDICTED FAILURE HORIZON</strong>
+              </div>
+              <div class="failure-desc" id="predicted-failure-text">
+                Cascading Thread Exhaustion predicted on Connection Pool within ~14m 20s if current 88% saturation persists unmitigated.
+              </div>
+              <div class="failure-meta-row" style="display:flex; justify-content:space-between; align-items:center;">
+                <div><span>Confidence: <strong>94.2%</strong></span> &bull; <span style="color:#f43f5e; font-weight:700;">RISK: P0</span></div>
+                <a href="aiops-ml.html" class="btn-solid-green" style="font-size:10.5px; padding:3px 8px; text-decoration:none;"><span>🧠</span> Test AI &rarr;</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.4 Overview Highlights & RCA Chain Grid -->
+      <div class="overview-layout-grid">
+          <!-- Left Column: Milestone Highlights -->
+          <div class="content-panel">
+            <div class="panel-header-row">
+              <div class="panel-heading"><span>🚩</span> Critical Milestone Progression</div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge-pill">Verbatim Quotes</span>
+                <a href="timeline.html" class="btn-outline" style="font-size:11px; padding:3px 9px; text-decoration:none; color:#38bdf8; border-color:rgba(56,189,248,0.3); display:inline-flex; align-items:center; gap:4px;" title="Open dedicated Forensic Timeline page">
+                  <span>🕒</span> Open Timeline &rarr;
+                </a>
+              </div>
+            </div>
+            <div class="panel-body-padded">
+              <div class="timeline-track" id="overview-milestones-track">
+                <!-- Injected via app.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: 5-Whys Preview & Sign-off Card -->
+          <div class="right-column-container">
+            <!-- Root Cause Highlight -->
+            <div class="content-panel">
+              <div class="panel-header-row">
+                <div class="panel-heading"><span>🎯</span> Primary Root Cause</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="badge-pill" style="color:var(--coral-red)">Confirmed</span>
+                  <a href="rca.html" class="btn-outline" style="font-size:11px; padding:3px 9px; text-decoration:none; color:#a855f7; border-color:rgba(168,85,247,0.3); display:inline-flex; align-items:center; gap:4px;" title="Open dedicated 5-Whys Root Cause page">
+                    <span>🔍</span> Open 5-Whys &rarr;
+                  </a>
+                </div>
+              </div>
+              <div class="panel-body-padded">
+                <p id="overview-root-cause" style="font-size:12.5px; line-height:1.55; color:var(--text-main); font-weight:500;">
+                  Loading root cause analysis...
+                </p>
+              </div>
+            </div>
+
+            <!-- 5-Whys Chain Preview -->
+            <div class="content-panel">
+              <div class="panel-header-row">
+                <div class="panel-heading"><span>🔬</span> 5-Whys Causal Chain</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="badge-pill">Recursive RCA</span>
+                  <a href="rca.html" class="btn-outline" style="font-size:11px; padding:3px 9px; text-decoration:none; color:#a855f7; border-color:rgba(168,85,247,0.3); display:inline-flex; align-items:center; gap:4px;">
+                    <span>Tree View &rarr;</span>
+                  </a>
+                </div>
+              </div>
+              <div class="panel-body-padded">
+                <div class="whys-chain-list" id="overview-whys-list">
+                  <!-- Injected via app.js -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Human Sign-Off Gate Card -->
+            <div class="content-panel">
+              <div class="panel-header-row">
+                <div class="panel-heading"><span>✍️</span> Human Review &amp; Sign-Off Gate</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="badge-pill" id="signoff-status-badge">Awaiting Review</span>
+                  <a href="report.html" class="btn-outline" style="font-size:11px; padding:3px 9px; text-decoration:none; color:#34d399; border-color:rgba(52,211,153,0.3); display:inline-flex; align-items:center; gap:4px;" title="Read complete 20-section audit post-mortem report">
+                    <span>📄</span> Full Report &rarr;
+                  </a>
+                </div>
+              </div>
+              <div class="panel-body-padded">
+                <div class="signoff-approval-list">
+                  <div class="signoff-card">
+                    <div class="signoff-name-role">
+                      <strong>Alex Morgan</strong> &bull; Lead SRE Commander
+                      <div id="signoff-subtext" style="color:var(--text-tertiary); font-size:11px; margin-top:2px;">
+                        Pending SRE review &amp; verification
+                      </div>
+                    </div>
+                    <button id="btn-sign-card" class="btn-sign">Approve Incident</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<!-- Direct Telemetry File Upload Modal -->
+  <div id="modal-ingest-data" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:580px;">
+      <div class="modal-header">
+        <div class="panel-heading"><span>⚡</span> Telemetry File Upload &amp; Automated Analysis</div>
+        <button id="btn-close-ingest" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:14px;">
+          Target Incident Container: <strong id="ingest-target-incident-id" style="color:#38bdf8;">INC-...</strong>
+        </div>
+
+        <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">🤖</span>
+            <div>
+              <div style="font-size:12px; font-weight:600; color:#38bdf8;">Instant Multi-Agent AI Analysis</div>
+              <div style="font-size:11px; color:var(--text-tertiary);">PII redaction, event sorting, ML failure classification &amp; 5-Whys RCA run automatically.</div>
+            </div>
+          </div>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#34d399; cursor:pointer;">
+            <input type="checkbox" id="ingest-auto-analyze-toggle" checked style="accent-color:#10b981; width:16px; height:16px;">
+            Auto-Analyze
+          </label>
+        </div>
+
+        <label class="form-label">Telemetry Source Type</label>
+        <select id="ingest-source-type" class="select-box" style="width:100%; margin-bottom:14px;">
+          <option value="auto">✨ Auto-Detect from File (Recommended)</option>
+          <option value="slack">Slack / Teams Incident War Room Transcript</option>
+          <option value="datadog">Datadog / CloudWatch / Prometheus Monitoring Alarms</option>
+          <option value="jira">Jira Incident Ticket / SRE Triage Log</option>
+          <option value="log">Application &amp; Database System Log Stream</option>
+          <option value="cicd">GitHub Actions / CI-CD Deployment &amp; Rollback Events</option>
+        </select>
+
+        <!-- Direct File Upload Dropzone -->
+        <div id="ingest-dropzone" class="dropzone-container">
+          <div class="dropzone-icon">☁️</div>
+          <div class="dropzone-title">Drag &amp; Drop Telemetry File Here</div>
+          <div class="dropzone-subtitle">or <span class="dropzone-browse-btn">browse your computer</span></div>
+          <div class="dropzone-tags">
+            <span class="dropzone-tag">.LOG</span>
+            <span class="dropzone-tag">.JSON</span>
+            <span class="dropzone-tag">.CSV</span>
+            <span class="dropzone-tag">.TXT</span>
+            <span class="dropzone-tag">.MD</span>
+            <span class="dropzone-tag">.PDF</span>
+          </div>
+          <input type="file" id="ingest-file-input" style="display:none;" accept=".log,.txt,.json,.csv,.md,.pdf" />
+        </div>
+
+        <!-- File Selected Preview Card (Shown dynamically) -->
+        <div id="ingest-file-preview" class="file-preview-card" style="display:none;">
+          <div class="file-preview-left">
+            <div class="file-preview-icon">📄</div>
+            <div class="file-preview-details">
+              <div id="preview-file-name" class="file-preview-name">operational_log.txt</div>
+              <div class="file-preview-meta">
+                <span id="preview-file-size">142 KB</span>
+                <span>•</span>
+                <span id="preview-detected-type">Detected: Application Log</span>
+              </div>
+            </div>
+          </div>
+          <button id="btn-remove-selected-file" class="file-remove-btn" title="Remove selected file">&times;</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-ingest" class="btn-outline">Cancel</button>
+        <button id="btn-submit-ingest" class="btn-solid-green" disabled style="opacity:0.6; cursor:not-allowed;"><span>⚡</span> Upload &amp; Run Analysis</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- =====================================================================
+       AEGISOPS FORENSIC INTELLIGENCE COPILOT (AI CHATBOT WIDGET)
+       ===================================================================== -->
+  <div id="aegisops-chatbot-container" class="chatbot-widget-container">
+    <!-- Floating Trigger Pill Button -->
+    <button id="chatbot-toggle-pill" class="chatbot-floating-toggle aegisops-chatbot-toggle" title="Open AegisOps Forensic Intelligence Copilot">
+      <div class="chatbot-toggle-inner">
+        <span class="chatbot-icon">🤖</span>
+        <span class="chatbot-toggle-text">AegisOps Copilot</span>
+        <span class="live-dot-green"></span>
+      </div>
+    </button>
+
+    <!-- Glassmorphic Chat Window -->
+    <div id="chatbot-window-box" class="chatbot-window-box" style="display:none;">
+      <div class="chatbot-window-header">
+        <div class="chatbot-header-left">
+          <div class="chatbot-avatar">🛡️</div>
+          <div>
+            <div class="chatbot-header-title">AegisOps Forensic Copilot</div>
+            <div class="chatbot-header-status"><span class="status-dot online"></span> Dedicated Project Specialist AI</div>
+          </div>
+        </div>
+        <div class="chatbot-header-actions">
+          <button id="chatbot-btn-clear" class="chatbot-tool-btn" title="Clear conversation history">🗑️</button>
+          <button id="chatbot-btn-close" class="chatbot-tool-btn" title="Minimize Copilot">&times;</button>
+        </div>
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="chatbot-chips-bar" id="chatbot-chips-bar">
+        <button class="chat-chip" data-prompt="What is the verified root cause of this incident?" data-query="What is the verified root cause of this incident?">🔍 Root Cause</button>
+        <button class="chat-chip" data-prompt="Explain the 141k dataset data science profiling results" data-query="Explain the 141k dataset data science profiling results">📊 141k Dataset Analysis</button>
+        <button class="chat-chip" data-prompt="How does the deterministic sorter eliminate hallucinations?" data-query="How does the deterministic sorter eliminate hallucinations?">⚙️ Deterministic Sorter</button>
+        <button class="chat-chip" data-prompt="What are the top 5 failure categories?" data-query="What are the top 5 failure categories?">🎯 Top Failure Categories</button>
+        <button class="chat-chip" data-prompt="Explain the MTTR percentiles and SLA breach rate" data-query="Explain the MTTR percentiles and SLA breach rate">⏱️ MTTR &amp; SLA Breaches</button>
+        <button class="chat-chip" data-prompt="How does security &amp; PII redaction work?" data-query="How does security &amp; PII redaction work?">🔒 Security &amp; PII</button>
+      </div>
+
+      <!-- Chat Messages Scroll Area -->
+      <div class="chatbot-messages-scroll" id="chatbot-messages">
+        <div class="chat-msg bot bot-msg">
+          <div class="chat-msg-avatar">🤖</div>
+          <div class="chat-msg-bubble">
+            Hello! I am the <strong>AegisOps Forensic Intelligence Copilot</strong>. I am trained exclusively on this project's 10-step multi-agent architecture, deterministic temporal sorting, forensic RCA, and dataset profiling (100k-300k+ records).<br><br>
+            Ask me anything about this incident's root cause, SLA breach analysis, telemetry data, or system architecture!
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="chatbot-input-row">
+        <input type="text" id="chatbot-input" class="chatbot-text-field" placeholder="Ask about this incident, root cause, dataset or architecture..." autocomplete="off" />
+        <button id="chatbot-btn-send" class="chatbot-send-btn" title="Send Question"><span>➤</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

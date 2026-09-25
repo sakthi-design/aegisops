@@ -1,0 +1,57 @@
+{
+  "log_anomaly_model": {
+    "model_name": "AegisLogNet-v2",
+    "task": "Log Anomaly Detection",
+    "training_samples": 12320,
+    "test_samples": 3081,
+    "accuracy": 0.999,
+    "precision": 0.9991,
+    "recall": 0.9981,
+    "f1_score": 0.9986,
+    "roc_auc": 1.0
+  },
+  "rca_classifier": {
+    "model_name": "AegisRCA-Pro",
+    "task": "Outage Root Cause Multi-Class Classification",
+    "classes": [
+      "bad_deployment_and_regression",
+      "certificate_and_auth_failure",
+      "concurrency_and_deadlocks",
+      "database_and_storage_saturation",
+      "memory_and_resource_exhaustion",
+      "network_and_routing_failure",
+      "upstream_and_third_party_dependency"
+    ],
+    "num_classes": 7,
+    "training_samples": 250,
+    "test_samples": 63,
+    "top1_accuracy": 0.5397,
+    "top2_accuracy": 0.7143,
+    "top3_accuracy": 0.873,
+    "weighted_precision": 0.5442,
+    "weighted_recall": 0.5397,
+    "weighted_f1_score": 0.5159
+  },
+  "severity_ranker": {
+    "model_name": "AegisTriage-Rank",
+    "task": "Incident Severity Classification (P0-P3)",
+    "classes": [
+      "P0",
+      "P1",
+      "P2",
+      "P3"
+    ],
+    "training_samples": 260,
+    "test_samples": 66,
+    "accuracy": 0.7273,
+    "macro_f1_score": 0.3727
+  },
+  "knowledge_index": {
+    "model_name": "AegisKnowledgeIndex",
+    "task": "Dense Semantic Retrieval",
+    "total_indexed_documents": 349,
+    "post_mortems_count": 313,
+    "runbooks_count": 36,
+    "vocab_size": 20000
+  }
+}
