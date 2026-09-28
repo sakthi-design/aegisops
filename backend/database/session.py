@@ -29,12 +29,23 @@ engine = create_engine(
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+_db_initialized = False
+
 def init_db():
+    global _db_initialized
+    if _db_initialized:
+        return
+    _db_initialized = True
     Base.metadata.create_all(bind=engine)
     if os.environ.get("VERCEL"):
         try:
-            from scripts.seed_database import seed_demo_incident
-            seed_demo_incident()
+            db = SessionLocal()
+            from backend.database.repositories.incident_repo import IncidentRepository
+            repo = IncidentRepository(db)
+            if not repo.get_incident("INC-2026-PAY-882"):
+                from scripts.seed_database import seed_demo_incident
+                seed_demo_incident(skip_init=True)
+            db.close()
         except Exception:
             pass
 

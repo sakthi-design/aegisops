@@ -8,6 +8,9 @@ class RedactionAudit(BaseModel):
     redaction_count: int = 0
     secret_types_found: List[str] = Field(default_factory=list)
     scrubbed_snippets: List[str] = Field(default_factory=list)
+    content_sha256: Optional[str] = None
+    sanitized_sha256: Optional[str] = None
+    hmac_salted_hashes: List[str] = Field(default_factory=list)
 
 class AuditLogEntry(BaseModel):
     id: str

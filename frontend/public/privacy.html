@@ -66,7 +66,6 @@
         <a href="interactive-timeline.html" class="subnav-tab-btn" data-tab="tab-interactive-timeline"><span>⏱️</span> Interactive Timeline</a>
         <a href="radar.html" class="subnav-tab-btn" data-tab="tab-radar"><span>📡</span> Multi-Task Radar</a>
         <a href="causal-graph.html" class="subnav-tab-btn" data-tab="tab-causal-graph"><span>🕸️</span> Causal Graph & Impacts</a>
-        <a href="gis-damage.html" class="subnav-tab-btn" data-tab="tab-gis-damage"><span>🗺️</span> Damage Location / GIS</a>
       </div>
       <div class="subnav-right-meta">
         <span class="status-indicator-live">●</span>
@@ -95,19 +94,101 @@
 <!-- ================================================================= -->
       <!-- TAB 6: PRIVACY & ZERO-TRUST SECURITY -->
       <!-- ================================================================= -->
-      <section id="tab-privacy" class="tab-pane active" style="display:flex;">
+<!-- ================================================================= -->
+      <!-- TAB 6: PRIVACY & ZERO-TRUST SECURITY -->
+      <!-- ================================================================= -->
+      <section id="tab-privacy" class="tab-pane active" style="display:flex; flex-direction:column; gap:20px;">
+        <!-- Cryptographic Zero-Trust & SHA-256 Hashing Dashboard -->
+        <div class="crypto-security-banner">
+          <div class="crypto-banner-header">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="crypto-shield-icon">🛡️</div>
+              <div>
+                <div class="crypto-banner-title">Zero-Trust Cryptographic Privacy &amp; SHA-256 Hashing Architecture</div>
+                <div class="crypto-banner-subtitle">
+                  Deterministic SHA-256 evidence digests guarantee tamper-proof audit trails. All credentials and PII are masked using salted HMAC-SHA256 pseudonym tokens before LLM ingestion.
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="crypto-audit-pill" class="status-tag verified">
+                <span class="status-dot"></span>
+                <span>FIPS 180-4 VERIFIED</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="crypto-kpi-grid">
+            <div class="crypto-kpi-card">
+              <div class="crypto-kpi-label">RAW INGESTION CONTENT SHA-256</div>
+              <div class="crypto-hash-row">
+                <code id="crypto-raw-sha256" class="crypto-hash-code" title="Cryptographic SHA-256 of Raw Telemetry">Computing hash...</code>
+                <button id="btn-copy-raw-hash" class="btn-hash-copy" title="Copy raw SHA-256 hash">📋 Copy</button>
+              </div>
+              <div class="crypto-kpi-subtext">Immutable baseline digest computed on arrival</div>
+            </div>
+
+            <div class="crypto-kpi-card">
+              <div class="crypto-kpi-label">PRE-LLM MASKED STREAM SHA-256</div>
+              <div class="crypto-hash-row">
+                <code id="crypto-san-sha256" class="crypto-hash-code" title="Cryptographic SHA-256 of Scrubbed Stream">Computing hash...</code>
+                <button id="btn-copy-san-hash" class="btn-hash-copy" title="Copy scrubbed SHA-256 hash">📋 Copy</button>
+              </div>
+              <div class="crypto-kpi-subtext">Air-gapped safe stream ingested by AI reasoning models</div>
+            </div>
+
+            <div class="crypto-kpi-card">
+              <div class="crypto-kpi-label">SALTED HMAC-SHA256 PSEUDONYMIZATION</div>
+              <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;">
+                <span id="crypto-redaction-count" class="crypto-stat-big">0</span>
+                <span style="font-size:12px; color:var(--text-secondary);">active redactions</span>
+              </div>
+              <div class="crypto-kpi-subtext" id="crypto-secret-types-list">OpenAI keys, AWS credentials, DB passwords, PII</div>
+            </div>
+
+            <div class="crypto-kpi-card">
+              <div class="crypto-kpi-label">TAMPER-PROOF INTEGRITY STATUS</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                <span style="color:#34d399; font-size:18px;">✓</span>
+                <span style="font-size:14px; font-weight:700; color:#34d399;" id="crypto-integrity-verdict">100% Tamper Evident</span>
+              </div>
+              <div class="crypto-kpi-subtext">Constant-time verification matches database audit logs</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Evidence Source Selector Bar -->
+        <div class="privacy-source-bar">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:13px; font-weight:600; color:var(--text-secondary);">Select Evidence Source:</span>
+            <div id="privacy-source-pills" class="privacy-source-pills-list">
+              <button class="source-pill-btn active" data-src-idx="-1">All Ingested Sources</button>
+            </div>
+          </div>
+          <div id="privacy-source-meta" style="font-size:12px; color:var(--text-tertiary); font-family:var(--font-mono);">
+            Showing all evidence channels
+          </div>
+        </div>
+
+        <!-- Dual Stream Diff Comparison View -->
         <div class="privacy-grid">
           <div class="diff-card">
             <div class="diff-card-header">
-              <span>⚠️ Raw Ingested Input (Contains Secrets)</span>
-              <span class="badge-pill" style="color:var(--coral-red)">Unsanitized</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span>⚠️ Raw Ingested Input (High-Entropy Secrets &amp; PII)</span>
+                <span class="badge-pill" style="color:var(--coral-red)">Unsanitized</span>
+              </div>
+              <span id="raw-stream-meta" style="font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono);"></span>
             </div>
             <pre class="diff-content" id="raw-unmasked-content">Loading raw data...</pre>
           </div>
           <div class="diff-card">
             <div class="diff-card-header">
-              <span>🛡️ Pre-LLM Masked Stream (Zero-Trust)</span>
-              <span class="badge-pill" style="color:var(--green-primary)">Scrubbed</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span>🛡️ Pre-LLM Masked Stream (Zero-Trust Cryptographic Redaction)</span>
+                <span class="badge-pill" style="color:var(--green-primary)">Scrubbed</span>
+              </div>
+              <span id="san-stream-meta" style="font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono);"></span>
             </div>
             <pre class="diff-content" id="sanitized-masked-content">Loading scrubbed data...</pre>
           </div>

@@ -1,9 +1,11 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -23,21 +25,68 @@ wheels/
 # Virtual environments
 .venv/
 venv/
+env/
 ENV/
 
-# Database files
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# SQLite & Database files (Protects against pushing 500MB+ DBs to GitHub)
 *.db
+*.db-*
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
 *.sqlite3
+*.sqlite3-*
+data/*.db
+data/*.db-*
+data/*.sqlite
+data/*.sqlite3
 
-# Environment files
+# Environment files & Secrets
 .env
+.env.*
 .env.local
+.env.*.local
+!.env.example
 
-# IDE
+# Temporary files & Scratch scripts
+scratch/
+tmp/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# IDE & Editor configuration
 .idea/
 .vscode/
-*.swp
+*.sublime-project
+*.sublime-workspace
 
-# OS
+# Operating System artifacts
 .DS_Store
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# Deployment artifacts
+.vercel
+.vercel/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Application Runtime Logs (Preserves benchmark logs in data/raw)
+*.log
+!data/raw/**
+!data/knowledge_base/**

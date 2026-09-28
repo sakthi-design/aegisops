@@ -20,9 +20,12 @@ from backend.database.repositories.incident_repo import IncidentRepository
 from backend.pipeline.state import PipelineState
 from backend.pipeline.orchestrator import IncidentOrchestrator
 from backend.models.incident import IncidentStatus
+from backend.security.hasher import compute_content_sha256
+from backend.security.sanitizer import SanitizationEngine
 
-def seed_demo_incident():
-    init_db()
+def seed_demo_incident(skip_init: bool = False):
+    if not skip_init:
+        init_db()
     db = SessionLocal()
     repo = IncidentRepository(db)
     orchestrator = IncidentOrchestrator()
@@ -84,14 +87,18 @@ def seed_demo_incident():
     ]
 
     raw_inputs = []
+    sanitizer = SanitizationEngine()
     for fname, stype, content in sources:
+        san_res = sanitizer.sanitize(content)
         ev = repo.add_raw_evidence(
             incident_id=incident_id,
             source_id=f"src_{fname.split('.')[0]}",
             filename=fname,
             source_type=stype,
-            content_hash=f"hash_{fname}",
-            raw_content=content
+            content_hash=san_res.content_sha256,
+            raw_content=content,
+            sanitized_content=san_res.sanitized_text,
+            redaction_count=san_res.audit.redaction_count
         )
         raw_inputs.append({
             "source_id": ev.id,

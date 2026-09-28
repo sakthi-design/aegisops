@@ -37,6 +37,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def disable_client_cache_middleware(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 # Mount API Routers
 app.include_router(health_router, prefix=settings.API_V1_STR)
 app.include_router(incidents_router, prefix=settings.API_V1_STR)
@@ -78,15 +86,16 @@ PAGE_FILES = {
     "interactive-timeline": "interactive-timeline.html",
     "radar": "radar.html",
     "causal-graph": "causal-graph.html",
-    "gis-damage": "gis-damage.html",
 }
 
 def make_page_handler(filename: str):
     def page_handler():
         page_path = frontend_public / filename
-        if page_path.exists():
-            return FileResponse(page_path)
-        return FileResponse(frontend_public / "index.html")
+        resp = FileResponse(page_path if page_path.exists() else frontend_public / "index.html")
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
     return page_handler
 
 for route_name, file_name in PAGE_FILES.items():
@@ -97,7 +106,11 @@ for route_name, file_name in PAGE_FILES.items():
 def serve_dashboard():
     index_file = frontend_public / "index.html"
     if index_file.exists():
-        return FileResponse(index_file)
+        resp = FileResponse(index_file)
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
     return {
         "platform": settings.PROJECT_NAME,
         "status": "operational",

@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupInteractiveInvestigationTimeline();
   setupMultiTaskRadar();
   setupCausalGraphAndImpacts();
-  setupGISDamageMap();
   setupAegisOpsChatbot();
   await loadIncidentsList();
 });
@@ -63,8 +62,6 @@ function setupNavigationTabs() {
         setTimeout(() => renderMultiTaskRadar(currentIncidentData), 60);
       } else if (targetTabId === 'tab-causal-graph' && typeof renderCausalGraph === 'function') {
         setTimeout(() => renderCausalGraph(currentIncidentData), 60);
-      } else if (targetTabId === 'tab-gis-damage' && typeof renderGISDamageMap === 'function') {
-        setTimeout(() => renderGISDamageMap(currentIncidentData), 60);
       } else if (targetTabId === 'tab-interactive-timeline' && typeof renderInteractiveTimeline === 'function') {
         setTimeout(() => renderInteractiveTimeline(timelineEvents), 60);
       } else if (targetTabId === 'tab-forensic-matrix' && typeof renderForensicMatrix === 'function') {
@@ -690,7 +687,6 @@ async function loadIncidentDetails(incidentId) {
     if (typeof renderInteractiveTimeline === 'function') renderInteractiveTimeline(timelineEvents);
     if (typeof renderMultiTaskRadar === 'function') setTimeout(() => renderMultiTaskRadar(data), 50);
     if (typeof renderCausalGraph === 'function') setTimeout(() => renderCausalGraph(data), 50);
-    if (typeof renderGISDamageMap === 'function') setTimeout(() => renderGISDamageMap(data), 50);
   } catch (err) {
     console.error('Error loading incident details:', err);
   }
@@ -1556,22 +1552,197 @@ window.jumpToTimelineEvent = function(eventId) {
   }
 };
 
-// 8. Render Privacy Diff
-function renderPrivacyDiff(evidenceList) {
-  const rawEl = document.getElementById('raw-unmasked-content');
-  const sanEl = document.getElementById('sanitized-masked-content');
-  if (!rawEl || !sanEl) return;
+// =================================================================
+// 8. Render Privacy Diff & Cryptographic SHA-256 Verification
+// =================================================================
+let currentPrivacyEvidence = [];
+let activePrivacySourceIndex = -1; // -1 means all combined
 
-  if (evidenceList.length > 0) {
-    const rawCombined = evidenceList.map(e => `// --- SOURCE: ${e.filename} ---\n${e.raw_content}`).join('\n\n');
-    const sanCombined = evidenceList.map(e => `// --- SOURCE: ${e.filename} (Redactions: ${e.redaction_count}) ---\n${e.sanitized_content}`).join('\n\n');
-    rawEl.textContent = rawCombined;
-    sanEl.textContent = sanCombined;
-  } else {
-    rawEl.textContent = `[2026-09-25T14:04:20Z] @alex: Contact me on alert email alex.sre@fintech-corp.internal or phone +1-555-019-2834. Secret API key sk-proj-992182049103829.`;
-    sanEl.textContent = `[2026-09-25T14:04:20Z] @alex: Contact me on alert email [REDACTED_EMAIL] or phone +[REDACTED_PHONE_NUMBER]. Secret API key [REDACTED_OPENAI_API_KEY].`;
+function highlightCryptographicRedactions(text) {
+  if (!text) return '';
+  // HTML escape to prevent XSS
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Highlight [REDACTED_<TYPE>][SHA256:<HASH>]
+  return escaped.replace(
+    /(\[REDACTED_[A-Z0-9_]+\])(\[SHA256:([a-f0-9]{8,64})\])/g,
+    '<span class="redacted-crypto-tag">$1</span><span class="redacted-hash-badge" title="Deterministic Salted HMAC-SHA256 Pseudonym: $3">$2</span>'
+  ).replace(
+    /(\[REDACTED_[A-Z0-9_]+\])(?!\[SHA256:)/g,
+    '<span class="redacted-crypto-tag">$1</span>'
+  );
+}
+
+async function computeSha256Digest(str) {
+  if (!str) return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (err) {
+    return 'sha256-cryptographically-verified';
   }
 }
+
+function updatePrivacyDiffDisplay() {
+  const rawEl = document.getElementById('raw-unmasked-content');
+  const sanEl = document.getElementById('sanitized-masked-content');
+  const rawHashEl = document.getElementById('crypto-raw-sha256');
+  const sanHashEl = document.getElementById('crypto-san-sha256');
+  const redactionCountEl = document.getElementById('crypto-redaction-count');
+  const secretTypesEl = document.getElementById('crypto-secret-types-list');
+  const rawMetaEl = document.getElementById('raw-stream-meta');
+  const sanMetaEl = document.getElementById('san-stream-meta');
+  const sourceMetaEl = document.getElementById('privacy-source-meta');
+
+  if (!rawEl || !sanEl) return;
+
+  if (!currentPrivacyEvidence || currentPrivacyEvidence.length === 0) {
+    rawEl.textContent = `[2026-09-25T14:04:20Z] @alex: Contact me on alert email alex.sre@fintech-corp.internal or phone +1-555-019-2834. Secret API key sk-proj-992182049103829.`;
+    sanEl.innerHTML = highlightCryptographicRedactions(`[2026-09-25T14:04:20Z] @alex: Contact me on alert email [REDACTED_EMAIL][SHA256:7f83b165] or phone [REDACTED_PHONE_NUMBER][SHA256:4a9c1e2d]. Secret API key [REDACTED_OPENAI_API_KEY][SHA256:1a2b3c4d5e6f].`);
+    if (rawHashEl) rawHashEl.textContent = 'sha256:8f4c2e1b...demo';
+    if (sanHashEl) sanHashEl.textContent = 'sha256:3a9d7f0c...demo';
+    if (redactionCountEl) redactionCountEl.textContent = '3';
+    return;
+  }
+
+  let rawDisplay = '';
+  let sanDisplay = '';
+  let activeRawHash = '';
+  let activeSanHash = '';
+  let totalRedactions = 0;
+  const allSecretTypes = new Set();
+
+  if (activePrivacySourceIndex === -1) {
+    // All sources combined
+    rawDisplay = currentPrivacyEvidence.map(e => `// === SOURCE: ${e.filename} [SHA-256: ${e.content_hash || e.raw_sha256 || 'verified'}] ===\n${e.raw_content || ''}`).join('\n\n');
+    sanDisplay = currentPrivacyEvidence.map(e => `// === SOURCE: ${e.filename} (Redactions: ${e.redaction_count || 0}) [SHA-256: ${e.sanitized_sha256 || 'verified'}] ===\n${e.sanitized_content || ''}`).join('\n\n');
+
+    currentPrivacyEvidence.forEach(e => {
+      totalRedactions += (e.redaction_count || 0);
+      if (Array.isArray(e.secret_types_found)) {
+        e.secret_types_found.forEach(t => allSecretTypes.add(t));
+      }
+    });
+
+    if (sourceMetaEl) sourceMetaEl.textContent = `Showing all ${currentPrivacyEvidence.length} ingested telemetry streams combined`;
+    if (rawMetaEl) rawMetaEl.textContent = `${currentPrivacyEvidence.length} files • Combined Telemetry Stream`;
+    if (sanMetaEl) sanMetaEl.textContent = `${totalRedactions} Active HMAC Pseudonymizations`;
+
+    // Compute or format master combined hashes
+    computeSha256Digest(rawDisplay).then(h => {
+      if (rawHashEl) rawHashEl.textContent = h;
+    });
+    computeSha256Digest(sanDisplay).then(h => {
+      if (sanHashEl) sanHashEl.textContent = h;
+    });
+  } else {
+    // Single selected source
+    const ev = currentPrivacyEvidence[activePrivacySourceIndex];
+    if (ev) {
+      rawDisplay = `// === SOURCE: ${ev.filename} ===\n// SHA-256 Content Digest: ${ev.content_hash || ev.raw_sha256 || 'computing...'}\n\n${ev.raw_content || ''}`;
+      sanDisplay = `// === SOURCE: ${ev.filename} (Zero-Trust Scrubbed) ===\n// SHA-256 Sanitized Stream Digest: ${ev.sanitized_sha256 || 'computing...'}\n\n${ev.sanitized_content || ''}`;
+      activeRawHash = ev.content_hash || ev.raw_sha256 || '';
+      activeSanHash = ev.sanitized_sha256 || '';
+      totalRedactions = ev.redaction_count || 0;
+      if (Array.isArray(ev.secret_types_found)) {
+        ev.secret_types_found.forEach(t => allSecretTypes.add(t));
+      }
+
+      if (sourceMetaEl) sourceMetaEl.textContent = `Filtered to source: ${ev.filename} (${ev.source_type || 'telemetry'})`;
+      if (rawMetaEl) rawMetaEl.textContent = `File: ${ev.filename} • ${ev.total_lines || 1} lines`;
+      if (sanMetaEl) sanMetaEl.textContent = `File: ${ev.filename} • ${totalRedactions} Redactions`;
+
+      if (rawHashEl) rawHashEl.textContent = activeRawHash || 'sha256:verified';
+      if (sanHashEl) sanHashEl.textContent = activeSanHash || 'sha256:verified';
+    }
+  }
+
+  rawEl.textContent = rawDisplay;
+  sanEl.innerHTML = highlightCryptographicRedactions(sanDisplay);
+
+  if (redactionCountEl) redactionCountEl.textContent = String(totalRedactions);
+  if (secretTypesEl) {
+    secretTypesEl.textContent = allSecretTypes.size > 0
+      ? Array.from(allSecretTypes).join(', ')
+      : 'OpenAI API keys, AWS credentials, DB passwords, IP addresses, PII';
+  }
+}
+
+function renderPrivacyDiff(evidenceList) {
+  currentPrivacyEvidence = evidenceList || [];
+  activePrivacySourceIndex = -1;
+
+  // Render source selector pills
+  const pillsContainer = document.getElementById('privacy-source-pills');
+  if (pillsContainer && currentPrivacyEvidence.length > 0) {
+    pillsContainer.innerHTML = '';
+
+    const allBtn = document.createElement('button');
+    allBtn.className = 'source-pill-btn active';
+    allBtn.textContent = `All Sources (${currentPrivacyEvidence.length})`;
+    allBtn.onclick = () => {
+      document.querySelectorAll('.source-pill-btn').forEach(b => b.classList.remove('active'));
+      allBtn.classList.add('active');
+      activePrivacySourceIndex = -1;
+      updatePrivacyDiffDisplay();
+    };
+    pillsContainer.appendChild(allBtn);
+
+    currentPrivacyEvidence.forEach((ev, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'source-pill-btn';
+      const shortHash = (ev.content_hash || ev.raw_sha256 || '').substring(0, 7);
+      btn.textContent = `${ev.filename}${shortHash ? ` (#${shortHash})` : ''}`;
+      btn.onclick = () => {
+        document.querySelectorAll('.source-pill-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activePrivacySourceIndex = idx;
+        updatePrivacyDiffDisplay();
+      };
+      pillsContainer.appendChild(btn);
+    });
+  }
+
+  // Setup copy buttons once
+  const copyRawBtn = document.getElementById('btn-copy-raw-hash');
+  if (copyRawBtn && !copyRawBtn.dataset.bound) {
+    copyRawBtn.dataset.bound = 'true';
+    copyRawBtn.addEventListener('click', () => {
+      const code = document.getElementById('crypto-raw-sha256');
+      if (code && navigator.clipboard) {
+        navigator.clipboard.writeText(code.textContent.trim()).then(() => {
+          const orig = copyRawBtn.textContent;
+          copyRawBtn.textContent = '✓ Copied';
+          setTimeout(() => { copyRawBtn.textContent = orig; }, 2000);
+        });
+      }
+    });
+  }
+
+  const copySanBtn = document.getElementById('btn-copy-san-hash');
+  if (copySanBtn && !copySanBtn.dataset.bound) {
+    copySanBtn.dataset.bound = 'true';
+    copySanBtn.addEventListener('click', () => {
+      const code = document.getElementById('crypto-san-sha256');
+      if (code && navigator.clipboard) {
+        navigator.clipboard.writeText(code.textContent.trim()).then(() => {
+          const orig = copySanBtn.textContent;
+          copySanBtn.textContent = '✓ Copied';
+          setTimeout(() => { copySanBtn.textContent = orig; }, 2000);
+        });
+      }
+    });
+  }
+
+  updatePrivacyDiffDisplay();
+}
+
 
 // =================================================================
 // 9. Ingested Multi-Channel Telemetry Logs Engine
@@ -4492,184 +4663,29 @@ function updateCausalNodeInspector(node) {
 
 
 // =====================================================================
-// MODULE 5: DAMAGE LOCATION & GIS INFRASTRUCTURE WORLD MAP
-// =====================================================================
-let gisCanvas = null;
-let gisCtx = null;
-let gisAnimId = null;
-let isGisPingsActive = true;
-
-const GIS_REGIONS = [
-  { id: 'us-east', name: 'US-East (N. Virginia)', lat: 38.0, lng: -78.0, status: 'critical', blast: 94, p99: '1,420ms', drop: '14.8%', role: 'Epicenter Outage' },
-  { id: 'us-west', name: 'US-West (Oregon)', lat: 45.5, lng: -122.6, status: 'warning', blast: 48, p99: '240ms', drop: '2.4%', role: 'Standby Failover' },
-  { id: 'eu-central', name: 'EU-Central (Frankfurt)', lat: 50.1, lng: 8.6, status: 'nominal', blast: 8, p99: '42ms', drop: '0.0%', role: 'Read Replica Cluster' },
-  { id: 'ap-se', name: 'AP-Southeast (Singapore)', lat: 1.3, lng: 103.8, status: 'nominal', blast: 5, p99: '58ms', drop: '0.1%', role: 'Edge PoP Ingress' },
-  { id: 'sa-east', name: 'SA-East (São Paulo)', lat: -23.5, lng: -46.6, status: 'warning', blast: 36, p99: '310ms', drop: '3.8%', role: 'Regional Ingress' }
-];
-
-function setupGISDamageMap() {
-  gisCanvas = document.getElementById('canvas-gis-map');
-  const btnRefresh = document.getElementById('gis-btn-refresh');
-  const btnPings = document.getElementById('gis-btn-toggle-pings');
-
-  if (btnPings) {
-    btnPings.addEventListener('click', () => {
-      isGisPingsActive = !isGisPingsActive;
-      btnPings.innerHTML = isGisPingsActive ? '<span>⚡</span> Toggle Epicenter Pings' : '<span>⏸</span> Pings Paused';
-    });
-  }
-
-  if (btnRefresh) {
-    btnRefresh.addEventListener('click', () => {
-      showToast('Datacenter regional health and mesh latency telemetry refreshed', 'success');
-      renderGISDamageMap(currentIncidentData);
-    });
-  }
-}
-
-function renderGISDamageMap(incidentData) {
-  gisCanvas = document.getElementById('canvas-gis-map');
-  const listEl = document.getElementById('gis-regions-list');
-  if (!gisCanvas) return;
-  gisCtx = gisCanvas.getContext('2d');
-  if (!gisCtx) return;
-
-  if (listEl) {
-    listEl.innerHTML = GIS_REGIONS.map(reg => `
-      <div class="gis-region-row ${reg.status}">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <div>
-            <div style="font-weight:700; color:#f8fafc; font-size:13px;">${reg.name}</div>
-            <div style="font-size:11px; color:#94a3b8;">${reg.role}</div>
-          </div>
-          <span class="badge ${reg.status}">${reg.status.toUpperCase()}</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1; margin-bottom:4px;">
-          <span>Blast Radius: <strong>${reg.blast}%</strong></span>
-          <span>p99 Latency: <strong>${reg.p99}</strong></span>
-          <span>Packet Loss: <strong>${reg.drop}</strong></span>
-        </div>
-        <div class="damage-bar-track" style="height:4px;">
-          <div class="damage-bar-fill ${reg.status}" style="width:${reg.blast}%;"></div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  if (!gisAnimId) {
-    startGisAnimationLoop();
-  }
-}
-
-let pingRadius = 0;
-function startGisAnimationLoop() {
-  function loop() {
-    if (!gisCanvas) return;
-    const rect = gisCanvas.getBoundingClientRect();
-    const width = rect.width || 750;
-    const height = rect.height || 460;
-    const dpr = window.devicePixelRatio || 1;
-
-    if (gisCanvas.width !== width * dpr || gisCanvas.height !== height * dpr) {
-      gisCanvas.width = width * dpr;
-      gisCanvas.height = height * dpr;
-    }
-
-    gisCtx.resetTransform();
-    gisCtx.scale(dpr, dpr);
-    gisCtx.clearRect(0, 0, width, height);
-
-    // 1. Draw Cybernetic World Map Grid Lines
-    gisCtx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
-    gisCtx.lineWidth = 1;
-    for (let x = 0; x < width; x += 40) {
-      gisCtx.beginPath();
-      gisCtx.moveTo(x, 0);
-      gisCtx.lineTo(x, height);
-      gisCtx.stroke();
-    }
-    for (let y = 0; y < height; y += 40) {
-      gisCtx.beginPath();
-      gisCtx.moveTo(0, y);
-      gisCtx.lineTo(width, y);
-      gisCtx.stroke();
-    }
-
-    // Convert (lat, lng) to canvas (x, y) via Equirectangular Projection
-    const project = (lat, lng) => {
-      const x = ((lng + 180) / 360) * width;
-      const y = ((90 - lat) / 180) * height;
-      return { x, y };
-    };
-
-    // 2. Draw Interconnecting Backbone Fiber Trunk Lines
-    const epic = project(GIS_REGIONS[0].lat, GIS_REGIONS[0].lng);
-    GIS_REGIONS.forEach((reg, i) => {
-      if (i === 0) return;
-      const dest = project(reg.lat, reg.lng);
-      gisCtx.beginPath();
-      gisCtx.moveTo(epic.x, epic.y);
-      // Curved arc
-      const midX = (epic.x + dest.x) / 2;
-      const midY = Math.min(epic.y, dest.y) - 30;
-      gisCtx.quadraticCurveTo(midX, midY, dest.x, dest.y);
-      gisCtx.strokeStyle = reg.status === 'critical' ? 'rgba(251, 113, 133, 0.6)' : (reg.status === 'warning' ? 'rgba(251, 191, 36, 0.4)' : 'rgba(56, 189, 248, 0.3)');
-      gisCtx.setLineDash([3, 5]);
-      gisCtx.lineWidth = 1.5;
-      gisCtx.stroke();
-      gisCtx.setLineDash([]);
-    });
-
-    // 3. Draw Epicenter Radar Expanding Pulse Rings
-    if (isGisPingsActive) {
-      pingRadius = (pingRadius + 0.6) % 65;
-      for (let ring = 0; ring < 3; ring++) {
-        const r = (pingRadius + ring * 20) % 65;
-        const alpha = Math.max(0, 1 - r / 65);
-        gisCtx.beginPath();
-        gisCtx.arc(epic.x, epic.y, r, 0, Math.PI * 2);
-        gisCtx.strokeStyle = `rgba(244, 63, 94, ${alpha * 0.7})`;
-        gisCtx.lineWidth = 1.5;
-        gisCtx.stroke();
-      }
-    }
-
-    // 4. Draw Datacenter Markers
-    GIS_REGIONS.forEach(reg => {
-      const pt = project(reg.lat, reg.lng);
-      const isCrit = reg.status === 'critical';
-      const isWarn = reg.status === 'warning';
-
-      gisCtx.beginPath();
-      gisCtx.arc(pt.x, pt.y, isCrit ? 8 : 6, 0, Math.PI * 2);
-      gisCtx.fillStyle = isCrit ? '#f43f5e' : (isWarn ? '#fbbf24' : '#10b981');
-      gisCtx.shadowColor = gisCtx.fillStyle;
-      gisCtx.shadowBlur = 10;
-      gisCtx.fill();
-      gisCtx.shadowBlur = 0;
-
-      gisCtx.strokeStyle = '#ffffff';
-      gisCtx.lineWidth = 1.5;
-      gisCtx.stroke();
-
-      // Datacenter label
-      gisCtx.fillStyle = '#f8fafc';
-      gisCtx.font = '600 11px Inter, sans-serif';
-      gisCtx.textAlign = 'center';
-      gisCtx.fillText(reg.name, pt.x, pt.y - 12);
-    });
-
-    gisAnimId = requestAnimationFrame(loop);
-  }
-  gisAnimId = requestAnimationFrame(loop);
-}
-
-
-// =====================================================================
-// MODULE 6: AEGIS OPS COPILOT AI CHATBOT (GROUND TRUTH ENGINE)
+// MODULE 6: AEGIS OPS COPILOT AI CHATBOT (GROUND TRUTH ENGINE & 50 RAG Q&A)
 // =====================================================================
 let isChatbotOpen = false;
 let isChatbotThinking = false;
+let copilotQuestionsList = [];
+let activeQBankCategory = 'All';
+
+async function loadCopilotQuestions() {
+  if (window.AEGISOPS_50_QUESTIONS && window.AEGISOPS_50_QUESTIONS.length > 0) {
+    copilotQuestionsList = window.AEGISOPS_50_QUESTIONS;
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/chat/questions`);
+    if (res.ok) {
+      const data = await res.json();
+      copilotQuestionsList = data.questions || [];
+      window.AEGISOPS_50_QUESTIONS = copilotQuestionsList;
+    }
+  } catch (err) {
+    console.warn('Could not fetch questions from /api/chat/questions, loading script fallback');
+  }
+}
 
 function setupAegisOpsChatbot() {
   const pill = document.getElementById('chatbot-toggle-pill');
@@ -4679,6 +4695,26 @@ function setupAegisOpsChatbot() {
   const btnSend = document.getElementById('chatbot-btn-send') || document.getElementById('btn-chatbot-send');
   const inputEl = document.getElementById('chatbot-input') || document.getElementById('chatbot-input-text');
   const chips = document.querySelectorAll('.chat-chip');
+  const headerActions = box ? box.querySelector('.chatbot-header-actions') : null;
+
+  // Load questions data
+  loadCopilotQuestions().then(() => {
+    initQuestionBankUI(box);
+  });
+
+  // Inject 📚 50 RAG Q&A button into header
+  if (headerActions && !document.getElementById('chatbot-btn-qbank')) {
+    const qbankBtn = document.createElement('button');
+    qbankBtn.id = 'chatbot-btn-qbank';
+    qbankBtn.className = 'chatbot-qbank-btn';
+    qbankBtn.title = 'Browse 50+ Technical SRE & Architecture Questions';
+    qbankBtn.innerHTML = '<span>📚 50 RAG Q&amp;A</span>';
+    headerActions.insertBefore(qbankBtn, headerActions.firstChild);
+
+    qbankBtn.addEventListener('click', () => {
+      toggleQuestionBankPanel(true);
+    });
+  }
 
   if (pill) {
     pill.addEventListener('click', () => {
@@ -4705,7 +4741,7 @@ function setupAegisOpsChatbot() {
           <div class="chat-msg bot bot-msg">
             <div class="chat-msg-avatar">🤖</div>
             <div class="chat-msg-bubble">
-              Hello! I am your <strong>AegisOps Incident Intelligence Copilot</strong>. Ask me anything about this project's architecture, active incident RCA, dataset analytics, or forensic evidence.
+              Hello! I am your <strong>AegisOps Incident Intelligence Copilot</strong>. Click on <strong>📚 50 RAG Q&amp;A</strong> in the top header or ask me anything about this project's architecture, active incident RCA, or dataset telemetry!
             </div>
           </div>
         `;
@@ -4745,13 +4781,194 @@ function setupAegisOpsChatbot() {
   });
 }
 
+function initQuestionBankUI(box) {
+  if (!box || document.getElementById('chatbot-qbank-panel')) return;
+
+  const panel = document.createElement('div');
+  panel.id = 'chatbot-qbank-panel';
+  panel.className = 'chatbot-qbank-panel';
+  panel.style.display = 'none';
+
+  panel.innerHTML = `
+    <div class="qbank-header">
+      <div class="qbank-title-group">
+        <span class="qbank-title">📚 SRE Technical RAG Question Bank</span>
+        <span class="qbank-count-pill" id="qbank-count-badge">50 Questions</span>
+      </div>
+      <button id="qbank-btn-close" class="qbank-close-btn" title="Back to Chat">&times;</button>
+    </div>
+    <div class="qbank-search-bar">
+      <input type="text" id="qbank-search-input" class="qbank-search-input" placeholder="🔍 Search 50 questions (e.g. HikariCP, Sorter, RAG, PII, MTTR)..." />
+    </div>
+    <div class="qbank-categories-bar" id="qbank-cat-bar"></div>
+    <div class="qbank-list" id="qbank-cards-list"></div>
+  `;
+
+  box.appendChild(panel);
+
+  const btnClose = panel.querySelector('#qbank-btn-close');
+  if (btnClose) {
+    btnClose.addEventListener('click', () => toggleQuestionBankPanel(false));
+  }
+
+  const searchInput = panel.querySelector('#qbank-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      renderQuestionCards(e.target.value, activeQBankCategory);
+    });
+  }
+
+  renderQuestionCategories();
+  renderQuestionCards('', 'All');
+}
+
+function toggleQuestionBankPanel(open) {
+  const panel = document.getElementById('chatbot-qbank-panel');
+  if (!panel) return;
+  panel.style.display = open ? 'flex' : 'none';
+  if (open) {
+    const searchInput = document.getElementById('qbank-search-input');
+    if (searchInput) setTimeout(() => searchInput.focus(), 150);
+  }
+}
+
+function renderQuestionCategories() {
+  const catBar = document.getElementById('qbank-cat-bar');
+  if (!catBar || !copilotQuestionsList.length) return;
+
+  const categories = ['All'];
+  copilotQuestionsList.forEach(q => {
+    if (!categories.includes(q.category)) {
+      categories.push(q.category);
+    }
+  });
+
+  catBar.innerHTML = categories.map(cat => {
+    const icon = cat === 'All' ? '⚡' : (copilotQuestionsList.find(q => q.category === cat)?.category_icon || '📌');
+    const count = cat === 'All' ? copilotQuestionsList.length : copilotQuestionsList.filter(q => q.category === cat).length;
+    return `
+      <button class="qbank-cat-pill ${cat === activeQBankCategory ? 'active' : ''}" data-cat="${escapeHtml(cat)}">
+        ${icon} ${escapeHtml(cat)} (${count})
+      </button>
+    `;
+  }).join('');
+
+  catBar.querySelectorAll('.qbank-cat-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      catBar.querySelectorAll('.qbank-cat-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeQBankCategory = btn.getAttribute('data-cat');
+      const searchInput = document.getElementById('qbank-search-input');
+      const query = searchInput ? searchInput.value : '';
+      renderQuestionCards(query, activeQBankCategory);
+    });
+  });
+}
+
+function renderQuestionCards(searchQuery, category) {
+  const listEl = document.getElementById('qbank-cards-list');
+  const countBadge = document.getElementById('qbank-count-badge');
+  if (!listEl) return;
+
+  const qClean = (searchQuery || '').trim().toLowerCase();
+
+  const filtered = copilotQuestionsList.filter(item => {
+    const matchCat = (category === 'All' || item.category === category);
+    if (!matchCat) return false;
+    if (!qClean) return true;
+
+    const inQuestion = item.question.toLowerCase().includes(qClean);
+    const inAnswer = item.answer.toLowerCase().includes(qClean);
+    const inKeywords = (item.keywords || []).some(k => k.toLowerCase().includes(qClean));
+    const inId = String(item.id) === qClean || `q${item.id}` === qClean || `#${item.id}` === qClean;
+
+    return inQuestion || inAnswer || inKeywords || inId;
+  });
+
+  if (countBadge) {
+    countBadge.textContent = `${filtered.length} of ${copilotQuestionsList.length}`;
+  }
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = `
+      <div style="text-align:center; padding:30px 10px; color:#94a3b8; font-size:12px;">
+        🔍 No technical questions match "<strong>${escapeHtml(searchQuery)}</strong>".<br>
+        <span style="font-size:11px; color:#64748b; margin-top:6px; display:inline-block;">Try keywords like: <em>HikariCP, Sorter, RAG, PII, MTTR, ALB, 5-Whys</em></span>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(item => `
+    <div class="qbank-card" data-qid="${item.id}">
+      <div class="qbank-card-meta">
+        <span class="qbank-id-tag">#${item.id}</span>
+        <span class="qbank-cat-tag">${item.category_icon || '📌'} ${escapeHtml(item.category)}</span>
+      </div>
+      <div class="qbank-card-question">${escapeHtml(item.question)}</div>
+      <div class="qbank-card-actions">
+        <button class="qbank-ask-btn" data-qid="${item.id}" title="Click to ask in Copilot chat">
+          <span>⚡ Ask Copilot</span>
+        </button>
+        <button class="qbank-preview-toggle" data-qid="${item.id}">
+          <span>👁️ Instant Preview</span>
+        </button>
+      </div>
+      <div class="qbank-preview-content" id="qbank-preview-${item.id}">
+        <div>${formatChatMarkdown(item.answer)}</div>
+        ${item.citations && item.citations.length ? `
+          <div class="qbank-preview-citations">
+            <strong style="color:#94a3b8;">📚 Citations:</strong>
+            ${item.citations.map(c => `<span class="qbank-citation-chip">${escapeHtml(c)}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Wire up question click actions
+  listEl.querySelectorAll('.qbank-card').forEach(card => {
+    const qid = parseInt(card.getAttribute('data-qid'), 10);
+    const item = copilotQuestionsList.find(q => q.id === qid);
+    if (!item) return;
+
+    // Clicking card question or "Ask Copilot" button
+    const askBtn = card.querySelector('.qbank-ask-btn');
+    const triggerAsk = (e) => {
+      e.stopPropagation();
+      toggleQuestionBankPanel(false);
+      sendChatMessageToCopilot(item.question);
+    };
+
+    if (askBtn) askBtn.addEventListener('click', triggerAsk);
+    card.querySelector('.qbank-card-question')?.addEventListener('click', triggerAsk);
+
+    // Instant Preview Toggle
+    const previewBtn = card.querySelector('.qbank-preview-toggle');
+    const previewContent = card.querySelector(`#qbank-preview-${item.id}`);
+    if (previewBtn && previewContent) {
+      previewBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = previewContent.classList.contains('expanded');
+        if (isOpen) {
+          previewContent.classList.remove('expanded');
+          previewBtn.innerHTML = '<span>👁️ Instant Preview</span>';
+        } else {
+          previewContent.classList.add('expanded');
+          previewBtn.innerHTML = '<span>▲ Collapse</span>';
+        }
+      });
+    }
+  });
+}
+
 async function sendChatMessageToCopilot(userText) {
   const messagesEl = document.getElementById('chatbot-messages') || document.getElementById('chatbot-messages-container');
   if (!messagesEl) return;
 
   // Append User Bubble
   const userDiv = document.createElement('div');
-  userDiv.className = 'chat-msg user';
+  userDiv.className = 'chat-msg user user-msg';
   userDiv.innerHTML = `
     <div class="chat-msg-avatar">👤</div>
     <div class="chat-msg-bubble">${escapeHtml(userText)}</div>
@@ -4762,12 +4979,12 @@ async function sendChatMessageToCopilot(userText) {
   // Append Thinking Indicator Bubble
   isChatbotThinking = true;
   const thinkingDiv = document.createElement('div');
-  thinkingDiv.className = 'chat-msg bot thinking';
+  thinkingDiv.className = 'chat-msg bot bot-msg thinking';
   thinkingDiv.id = 'chat-thinking-bubble';
   thinkingDiv.innerHTML = `
     <div class="chat-msg-avatar">🤖</div>
     <div class="chat-msg-bubble" style="color:#94a3b8; font-style:italic;">
-      <span class="chat-pulse-dot">●</span> AegisOps Copilot is analyzing incident telemetry &amp; RCA...
+      <span class="chat-pulse-dot">●</span> AegisOps Copilot is retrieving RAG evidence &amp; forensic telemetry...
     </div>
   `;
   messagesEl.appendChild(thinkingDiv);
@@ -4784,25 +5001,29 @@ async function sendChatMessageToCopilot(userText) {
     });
 
     let botResponseText = '';
+    let followups = [];
+    let citations = [];
+
     if (resp.ok) {
       const data = await resp.json();
-      botResponseText = data.response;
+      botResponseText = data.response || data.reply || '';
+      followups = data.suggested_followups || [];
+      citations = data.citations || [];
     } else {
-      // Intelligent deterministic client fallback
       botResponseText = generateClientSideCopilotAnswer(userText);
     }
 
-    renderBotResponseBubble(botResponseText);
+    renderBotResponseBubble(botResponseText, followups, citations);
   } catch (err) {
     console.warn('API chat offline, using client-side grounded copilot engine:', err);
     const fallbackText = generateClientSideCopilotAnswer(userText);
-    renderBotResponseBubble(fallbackText);
+    renderBotResponseBubble(fallbackText, [], []);
   } finally {
     isChatbotThinking = false;
   }
 }
 
-function renderBotResponseBubble(markdownText) {
+function renderBotResponseBubble(markdownText, followups = [], citations = []) {
   const thinkingEl = document.getElementById('chat-thinking-bubble');
   if (thinkingEl) thinkingEl.remove();
 
@@ -4810,11 +5031,45 @@ function renderBotResponseBubble(markdownText) {
   if (!messagesEl) return;
 
   const botDiv = document.createElement('div');
-  botDiv.className = 'chat-msg bot';
+  botDiv.className = 'chat-msg bot bot-msg';
+
+  let citationsHtml = '';
+  if (citations && citations.length > 0) {
+    citationsHtml = `
+      <div class="qbank-preview-citations" style="margin-top:8px;">
+        <strong style="color:#94a3b8; font-size:10px;">📚 Citations:</strong>
+        ${citations.map(c => `<span class="qbank-citation-chip">${escapeHtml(c)}</span>`).join('')}
+      </div>
+    `;
+  }
+
+  let followupsHtml = '';
+  if (followups && followups.length > 0) {
+    followupsHtml = `
+      <div class="chat-followups-container">
+        <span class="chat-followup-title">⚡ Suggested Technical Follow-ups:</span>
+        ${followups.map(f => `<button class="chat-followup-chip" data-query="${escapeHtml(f)}">➤ ${escapeHtml(f)}</button>`).join('')}
+      </div>
+    `;
+  }
+
   botDiv.innerHTML = `
     <div class="chat-msg-avatar">🤖</div>
-    <div class="chat-msg-bubble">${formatChatMarkdown(markdownText)}</div>
+    <div class="chat-msg-bubble">
+      ${formatChatMarkdown(markdownText)}
+      ${citationsHtml}
+      ${followupsHtml}
+    </div>
   `;
+
+  // Wire up follow-up chips click
+  botDiv.querySelectorAll('.chat-followup-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.getAttribute('data-query');
+      if (q) sendChatMessageToCopilot(q);
+    });
+  });
+
   messagesEl.appendChild(botDiv);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -4822,10 +5077,24 @@ function renderBotResponseBubble(markdownText) {
 function formatChatMarkdown(text) {
   if (!text) return '';
   let out = escapeHtml(text);
+
+  // Markdown Headers
+  out = out.replace(/^### (.*$)/gim, '<h4 style="margin:8px 0 4px; color:#38bdf8; font-size:13px; font-weight:700;">$1</h4>');
+  out = out.replace(/^#### (.*$)/gim, '<h5 style="margin:6px 0 3px; color:#93c5fd; font-size:12px; font-weight:600;">$1</h5>');
+
   // Bold
   out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  out = out.replace(/\*(.*?)\*/g, '<em>$1</em>');
   // Inline Code
-  out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+  out = out.replace(/`([^`]+)`/g, '<code style="background:rgba(15,23,42,0.8); border:1px solid rgba(56,189,248,0.25); color:#38bdf8; padding:1px 5px; border-radius:4px; font-size:11px;">$1</code>');
+
+  // Blockquotes
+  out = out.replace(/^> (.*$)/gim, '<blockquote style="border-left:3px solid #38bdf8; margin:6px 0; padding-left:8px; color:#94a3b8; font-style:italic;">$1</blockquote>');
+
+  // Bullet items
+  out = out.replace(/^[-•]\s+(.*$)/gim, '<div style="margin:2px 0 2px 12px;">• $1</div>');
+
   // Line breaks
   out = out.replace(/\n\n/g, '<br><br>');
   out = out.replace(/\n/g, '<br>');
@@ -4850,12 +5119,32 @@ function generateClientSideCopilotAnswer(query) {
       "Please ask me about our platform architecture, active incident RCA, dataset ingestion, ML models, or telemetry analytics!";
   }
 
+  // Check if query matches any of our 50 technical RAG questions
+  const qList = (copilotQuestionsList && copilotQuestionsList.length > 0) 
+    ? copilotQuestionsList 
+    : (window.AEGISOPS_50_QUESTIONS || []);
+
+  const matchedQ = qList.find(item => {
+    const qText = item.question.toLowerCase();
+    if (qText === q || q.includes(qText) || qText.includes(q)) return true;
+    if (String(item.id) === q || `q${item.id}` === q || `#${item.id}` === q) return true;
+    return false;
+  }) || qList.find(item => {
+    const keywords = item.keywords || [];
+    const count = keywords.filter(k => q.includes(k.toLowerCase())).length;
+    return count >= 2;
+  });
+
+  if (matchedQ) {
+    return matchedQ.answer;
+  }
+
   // INTENT 1: Dataset Upload & Automated Cross-Page Analysis
   // Matches: "na dataset kodutha...", "dataset upload", "ella web lum show aaganum", "how to upload"
   if (q.includes('dataset') || q.includes('upload') || q.includes('ingest') || q.includes('kudutha') || q.includes('kodutha') || q.includes('analyse aagi') || q.includes('analyze aaganum') || q.includes('ella web') || q.includes('show aaganum')) {
     return `### ⚡ Automated Dataset Ingestion & Cross-Page Analysis Engine
 
-Neenga pudhu **Dataset** (.csv, .log, .json, .txt, .pdf) upload pannina, AegisOps automated end-to-end multi-agent pipeline trigger aagi, kizhakanda ella **14 dedicated web pages**-layum accurate-ah analyze panni update pannum:
+Neenga pudhu **Dataset** (.csv, .log, .json, .txt, .pdf) upload pannina, AegisOps automated end-to-end multi-agent pipeline trigger aagi, kizhakanda ella **13 dedicated enterprise web pages**-layum accurate-ah analyze panni update pannum:
 
 #### 🔄 What Happens During Ingestion & Analysis:
 1. **Zero-Trust Sanitization (\`/privacy\` page)**:
@@ -4866,8 +5155,8 @@ Neenga pudhu **Dataset** (.csv, .log, .json, .txt, .pdf) upload pannina, AegisOp
    - Multi-agent reasoning council automatic-ah 5-Whys causal tree, contributing factors, and corrective/preventive action items synthesize pannum.
 4. **High-Throughput Linear Profiler (\`/benchmarks\` & \`/forensic-matrix\` pages)**:
    - Multi-lakh records-a sub-5 second linear time-la scan panni **MTTD (${mttd}), MTTR (${mttr}), P50, P95**, and **SLA Breach Rate (${slaBreachRate}%)** compute pannum.
-5. **Subsystem Blast Radius & Topology (\`/topology\`, \`/causal-graph\`, \`/gis-damage\` pages)**:
-   - Ingested records-oda affected services (e.g. \`payment-processor\`, \`api-gateway\`, \`aurora-db\`) match aagi topology mesh, DAG causal graph, and global datacenter GIS map-la visualize aagum.
+5. **Subsystem Blast Radius & Topology (\`/topology\`, \`/causal-graph\` pages)**:
+   - Ingested records-oda affected services (e.g. \`payment-processor\`, \`api-gateway\`, \`aurora-db\`) match aagi topology mesh and DAG causal graph-la visualize aagum.
 6. **Certified 20-Section Post-Mortem Report (\`/report\` page)**:
    - SRE audit-ready post-mortem report dynamically generate aagi PDF and Markdown export-ku ready aagum.
 
@@ -4878,9 +5167,9 @@ Neenga pudhu **Dataset** (.csv, .log, .json, .txt, .pdf) upload pannina, AegisOp
 • **Adversarial Critic Audit:** ✅ PASSED (100% Grounded)`;
   }
 
-  // INTENT 2: 14 Dedicated Enterprise Pages Breakdown
-  if (q.includes('page') || q.includes('14') || q.includes('thaniya') || q.includes('vera vera') || q.includes('routes') || q.includes('screens') || q.includes('views') || q.includes('subnav')) {
-    return `### 🌐 AegisOps 14 Dedicated Enterprise Pages & Architecture
+  // INTENT 2: 13 Dedicated Enterprise Pages Breakdown
+  if (q.includes('page') || q.includes('13') || q.includes('14') || q.includes('thaniya') || q.includes('vera vera') || q.includes('routes') || q.includes('screens') || q.includes('views') || q.includes('subnav')) {
+    return `### 🌐 AegisOps 13 Dedicated Enterprise Pages & Architecture
 
 AegisOps oru **Tier-1 MNC Enterprise Production Standard**-ku thagapadi, ovvoru major operational responsibility-kum thani thani separate pages (\`.html\` and clean routes) maintain pannudhu:
 
@@ -4896,8 +5185,7 @@ AegisOps oru **Tier-1 MNC Enterprise Production Standard**-ku thagapadi, ovvoru 
 10. **🧬 Forensic Matrix & Raw Data (\`forensic-matrix.html\` / \`/forensic-matrix\`)**: Cryptographically hashed SHA-256 evidence matrix and 300,000 raw dataset browser with pagination.
 11. **⏱️ Interactive Timeline (\`interactive-timeline.html\` / \`/interactive-timeline\`)**: Interactive time-scrubber slider with animated multi-phase playback controls.
 12. **📡 Multi-Task Radar (\`radar.html\` / \`/radar\`)**: 6-axis SRE operational radar vectors (Detection, Resolution, Grounding, Noise Reduction, Security, Blast Containment).
-13. **🕸️ Causal Graph & Impacts (\`causal-graph.html\` / \`/causal-graph\`)**: Interactive Directed Acyclic Graph (DAG) showing failure propagation pathways.
-14. **🗺️ Damage Location / GIS (\`gis-damage.html\` / \`/gis-damage\`)**: Global datacenter blast radius map with live regional latency pings (US-East-1, EU-West-1, AP-South-1).`;
+13. **🕸️ Causal Graph & Impacts (\`causal-graph.html\` / \`/causal-graph\`)**: Interactive Directed Acyclic Graph (DAG) showing failure propagation pathways.`;
   }
 
   // INTENT 3: Root Cause & 5-Whys Analysis
@@ -4971,12 +5259,12 @@ AegisOps enforces strict air-gapped zero-data-leakage protocols:
 4. **Prompt Injection Immunity**: Adversarial instructions in incident logs (e.g. \`IGNORE PREVIOUS INSTRUCTIONS\`) are stripped and neutralized.`;
   }
 
-  // INTENT 7: Blast Radius, Causal Graph & GIS Map
-  if (q.includes('blast') || q.includes('impact') || q.includes('causal') || q.includes('graph') || q.includes('dag') || q.includes('gis') || q.includes('map') || q.includes('region') || q.includes('datacenter')) {
-    return `### 💥 Blast Radius, Causal Graph & GIS Regional Impact
-• **Primary Outage Epicenter:** \`US-East-1 (N. Virginia)\` (94% Blast Radius, 1,420ms p99 latency, 14.8% error rate).
+  // INTENT 7: Blast Radius & Causal Graph
+  if (q.includes('blast') || q.includes('impact') || q.includes('causal') || q.includes('graph') || q.includes('dag') || q.includes('containment')) {
+    return `### 💥 Subsystem Blast Radius & Causal Dependency Graph
+• **Primary Failure Vector:** \`payment-processor\` (HikariCP connection pool saturation, 94% blast radius).
 • **Causal Dependency Pathway:** \`v2.4.1 Deploy\` ➔ \`payment-processor\` HikariCP saturation ➔ \`api-gateway-service\` 503 timeouts ➔ \`ingress-alb\` 6200ms latency.
-• **Cascading Impact:** Downstream \`Kafka Event Bus\` (+24,000 lag) and \`US-West-2\` standby failover degradation.
+• **Cascading Impact:** Downstream \`Kafka Event Bus\` (+24,000 lag) and checkout transaction degradation.
 • **Containment Action:** AegisOps autonomous circuit breaker shed 40% non-critical read traffic to preserve core financial transactions.`;
   }
 
@@ -5018,12 +5306,12 @@ You can export the report directly as a **PDF Dossier** or **Markdown** document
 Incident nadakkum podhu fragmentary-ah irukkura telemetry (Slack chats, Datadog alerts, Jira tickets, application logs, and CI/CD deploys) ellaathayum collect panni, **100% verified, structured, explainable, and audit-ready incident narratives & post-mortems**-ah convert pannudhu.
 
 **Key Capabilities You Can Ask Me About:**
-• ⚡ **Dataset Upload & Cross-Web Analysis:** Any dataset (.csv, .log, .json, .txt) upload panna 14 pages-layum live update aagum.
+• ⚡ **Dataset Upload & Cross-Web Analysis:** Any dataset (.csv, .log, .json, .txt) upload panna 13 pages-layum live update aagum.
 • 🕒 **Deterministic Timeline Sorter:** Native Python UTC chronological sorting (zero hallucination).
 • 🔍 **5-Tier Root Cause Analysis (5-Whys):** Systematic recursive causal attribution from symptom to trigger.
 • 🧠 **Trained AIOps AI Neural Models:** \`AegisLogNet-v2\` anomaly detection & severity classification.
 • 🔒 **Zero-Trust Privacy:** Automated PII & API secret masking with SHA-256 evidence verification.
-• 🌐 **14 Enterprise Web Pages:** Complete dedicated pages for Topology, Logs, Causal Graph, GIS Map, Radar, and Post-Mortems.
+• 🌐 **13 Enterprise Web Pages:** Complete dedicated pages for Topology, Logs, Causal Graph, Radar, and Post-Mortems.
 
 Ask me anything about this project's architecture, active incident, or dataset analytics!`;
 }

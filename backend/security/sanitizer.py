@@ -1,10 +1,12 @@
 """
 Unified Security & Sanitization Layer.
-Enforces PII removal, secret masking, prompt injection defense, and retains audit records.
+Enforces PII removal, secret masking, cryptographic SHA-256 evidence hashing,
+prompt injection defense, and retains tamper-evident audit records.
 """
 from typing import Dict, Any, List
 from backend.security.secret_detector import detect_and_mask_secrets
 from backend.security.pii_scrubber import scrub_pii
+from backend.security.hasher import compute_content_sha256
 from backend.models.audit import RedactionAudit
 
 class SanitizerResult:
@@ -12,6 +14,10 @@ class SanitizerResult:
         self.original_text = original_text
         self.sanitized_text = sanitized_text
         self.audit = audit
+        self.content_sha256 = compute_content_sha256(original_text)
+        self.sanitized_sha256 = compute_content_sha256(sanitized_text)
+        self.audit.content_sha256 = self.content_sha256
+        self.audit.sanitized_sha256 = self.sanitized_sha256
 
     def to_untrusted_prompt_block(self) -> str:
         """
@@ -30,28 +36,40 @@ class SanitizationEngine:
             return SanitizerResult("", "", RedactionAudit(redaction_count=0))
 
         # Protect against massive payload CPU stall (e.g. 50MB raw CSV benchmarks)
-        is_oversized = len(text) > 250_000
+        is_oversized = len(text) > 300_000
         
         all_secret_types: List[str] = []
         scrubbed_snippets: List[str] = []
+        hmac_hashes: List[str] = []
 
         if is_oversized:
-            # For massive datasets (300k+ lines, 20-100MB+), audit a high-entropy sample
-            # (head 150KB + tail 100KB) to prevent CPU stall while retaining the complete telemetry
-            scan_sample = text[:150_000] + "\n" + text[-100_000:]
+            # For massive datasets, sanitize preview head (150KB) and tail (100KB)
+            head_chunk = text[:150_000]
+            tail_chunk = text[-100_000:]
+            middle_chunk = text[150_000:-100_000]
+            
+            sanitized_head = head_chunk
+            sanitized_tail = tail_chunk
+            
             if self.secret_enabled:
-                _, sec_audit = detect_and_mask_secrets(scan_sample)
-                for item in sec_audit:
+                sanitized_head, sec_head = detect_and_mask_secrets(sanitized_head)
+                sanitized_tail, sec_tail = detect_and_mask_secrets(sanitized_tail)
+                for item in sec_head + sec_tail:
                     all_secret_types.append(item["secret_type"])
                     scrubbed_snippets.append(item["replacement"])
+                    if "sha256_hmac" in item:
+                        hmac_hashes.append(item["sha256_hmac"])
+
             if self.pii_enabled:
-                _, pii_audit = scrub_pii(scan_sample)
-                for item in pii_audit:
+                sanitized_head, pii_head = scrub_pii(sanitized_head)
+                sanitized_tail, pii_tail = scrub_pii(sanitized_tail)
+                for item in pii_head + pii_tail:
                     all_secret_types.append(item["pii_type"])
                     scrubbed_snippets.append(item["replacement"])
+                    if "sha256_hmac" in item:
+                        hmac_hashes.append(item["sha256_hmac"])
 
-            # Retain complete dataset so downstream forensic engine analyzes all 300,000+ lines
-            sanitized = text
+            sanitized = sanitized_head + middle_chunk + sanitized_tail
         else:
             sanitized = text
             # 1. Scrub Secrets
@@ -60,6 +78,8 @@ class SanitizationEngine:
                 for item in sec_audit:
                     all_secret_types.append(item["secret_type"])
                     scrubbed_snippets.append(item["replacement"])
+                    if "sha256_hmac" in item:
+                        hmac_hashes.append(item["sha256_hmac"])
 
             # 2. Scrub PII
             if self.pii_enabled:
@@ -67,11 +87,14 @@ class SanitizationEngine:
                 for item in pii_audit:
                     all_secret_types.append(item["pii_type"])
                     scrubbed_snippets.append(item["replacement"])
+                    if "sha256_hmac" in item:
+                        hmac_hashes.append(item["sha256_hmac"])
 
         audit = RedactionAudit(
             redaction_count=len(all_secret_types),
             secret_types_found=sorted(list(set(all_secret_types))),
-            scrubbed_snippets=scrubbed_snippets[:20]  # Cap for brevity
+            scrubbed_snippets=scrubbed_snippets[:20],  # Cap for brevity
+            hmac_salted_hashes=hmac_hashes[:50]
         )
 
         return SanitizerResult(

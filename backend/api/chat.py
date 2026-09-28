@@ -36,7 +36,7 @@ PROJECT_KEYWORDS = [
     "timeline", "sorter", "deterministic", "mttr", "mttd", "dataset", "141k", "300k", "sla",
     "breach", "category", "sanitizer", "pii", "redaction", "secret", "benchmark", "ablation",
     "model", "classifier", "rag", "retriever", "critic", "synthesis", "hikaricp", "alb", "payment",
-    "service", "architecture", "accuracy", "metrics", "oscilloscope", "telemetry", "gis", "radar",
+    "service", "architecture", "accuracy", "metrics", "oscilloscope", "telemetry", "radar",
     "matrix", "evidence", "log", "tamper", "grounding", "confidence", "avengers", "project",
     "page", "pages", "web", "upload", "ingest", "scrubber", "causal", "graph", "dag", "blast",
     "radius", "report", "postmortem", "post-mortem", "signoff", "audit", "approve", "stack",
@@ -48,11 +48,24 @@ PROJECT_KEYWORDS = [
     "show", "aaganum", "answeer", "answer", "ketalum", "erukum"
 ]
 
+from backend.api.copilot_qbank import get_all_questions, get_question_categories, find_matching_question
+
 EXPLICIT_OFF_TOPIC = [
     "weather today", "cricket score", "ipl", "football match", "movie ticket",
     "cinema review", "cooking recipe", "biryani recipe", "horoscope", "astrology",
     "joke", "comedy", "capital of france", "sing a song", "dance video"
 ]
+
+@router.get("/questions")
+def get_copilot_questions():
+    """
+    Returns the complete catalog of 50 technical RAG questions organized by category.
+    """
+    return {
+        "total": len(get_all_questions()),
+        "categories": get_question_categories(),
+        "questions": get_all_questions()
+    }
 
 @router.post("/ask", response_model=ChatResponse)
 def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
@@ -61,8 +74,8 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
 
     if not raw_query:
         return ChatResponse(
-            reply="Hello! I am the **AegisOps Forensic Intelligence Copilot**. Ask me anything about our 10-step multi-agent architecture, uploaded datasets, 5-Whys root cause, ML models, or the 14 enterprise dashboard pages!",
-            response="Hello! I am the **AegisOps Forensic Intelligence Copilot**. Ask me anything about our 10-step multi-agent architecture, uploaded datasets, 5-Whys root cause, ML models, or the 14 enterprise dashboard pages!",
+            reply="Hello! I am the **AegisOps Forensic Intelligence Copilot**. Ask me anything about our 10-step multi-agent architecture, uploaded datasets, 5-Whys root cause, ML models, or the 13 enterprise dashboard pages! Click on the **📚 50 RAG Q&A** button above to browse all technical questions.",
+            response="Hello! I am the **AegisOps Forensic Intelligence Copilot**. Ask me anything about our 10-step multi-agent architecture, uploaded datasets, 5-Whys root cause, ML models, or the 13 enterprise dashboard pages! Click on the **📚 50 RAG Q&A** button above to browse all technical questions.",
             is_project_query=True,
             suggested_followups=[
                 "What is the verified root cause of this incident?",
@@ -88,6 +101,25 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
                 "What are the 14 enterprise pages in this application?",
                 "How does dataset ingestion and automated analysis work?"
             ]
+        )
+
+    # Check if this matches one of our 50 Technical RAG Questions & Grounded Answers
+    matched_q = find_matching_question(raw_query)
+    if matched_q:
+        q_id = matched_q["id"]
+        # Find next sequential questions for followups
+        all_qs = get_all_questions()
+        next_followups = []
+        for offset in [1, 2]:
+            next_idx = (q_id - 1 + offset) % len(all_qs)
+            next_followups.append(all_qs[next_idx]["question"])
+
+        return ChatResponse(
+            reply=matched_q["answer"],
+            response=matched_q["answer"],
+            is_project_query=True,
+            suggested_followups=next_followups,
+            citations=matched_q.get("citations", ["AegisOps RAG Ground Truth"])
         )
 
     # 1. Fetch Active Incident Context if available
@@ -160,7 +192,7 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
         reply = (
             f"### ⚡ Automated Dataset Ingestion & Cross-Page Analysis Engine\n\n"
             f"Neenga pudhu **Dataset** (.csv, .log, .json, .txt, .pdf) upload pannina, AegisOps automated end-to-end multi-agent pipeline trigger aagi, "
-            f"kizhakanda ella **14 dedicated web pages**-layum accurate-ah analyze panni update pannum:\n\n"
+            f"kizhakanda ella **13 dedicated enterprise web pages**-layum accurate-ah analyze panni update pannum:\n\n"
             f"#### 🔄 What Happens During Ingestion & Analysis:\n"
             f"1. **Zero-Trust Sanitization (`/privacy` page)**:\n"
             f"   - Dataset-la irukkura PII (emails, phone numbers, IPs) and secrets (OpenAI API keys `sk-proj-...`, AWS tokens) automatic-ah redact aagum.\n"
@@ -170,8 +202,8 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
             f"   - Multi-agent reasoning council automatic-ah 5-Whys causal tree, contributing factors, and corrective/preventive action items synthesize pannum.\n"
             f"4. **High-Throughput Linear Profiler (`/benchmarks` & `/forensic-matrix` pages)**:\n"
             f"   - Multi-lakh records-a O(N) linear time-la scan panni **MTTD, Mean MTTR, P50 (Median), P95 (Tail)**, and **SLA Breach Rate** ({sla_breach_rate}%) compute pannum.\n"
-            f"5. **Subsystem Blast Radius & Topology (`/topology`, `/causal-graph`, `/gis-damage` pages)**:\n"
-            f"   - Ingested records-oda affected services (e.g. `payment-processor`, `api-gateway`, `aurora-db`) match aagi topology mesh, DAG causal graph, and global datacenter GIS map-la visualize aagum.\n"
+            f"5. **Subsystem Blast Radius & Topology (`/topology`, `/causal-graph` pages)**:\n"
+            f"   - Ingested records-oda affected services (e.g. `payment-processor`, `api-gateway`, `aurora-db`) match aagi topology mesh and DAG causal graph-la visualize aagum.\n"
             f"6. **Certified 20-Section Post-Mortem Report (`/report` page)**:\n"
             f"   - SRE audit-ready post-mortem report dynamically generate aagi PDF and Markdown export-ku ready aagum.\n\n"
             f"📊 **Current Analyzed Dataset Status:**\n"
@@ -181,20 +213,20 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
             f"- **Adversarial Critic Audit:** {'✅ PASSED (100% Grounded)' if active_inc and active_inc.audit_passed else 'Audited & Grounded'}"
         )
         followups = [
-            "What are the 14 enterprise pages in this application?",
+            "What are the 13 enterprise pages in this application?",
             "What is the verified root cause of this dataset?",
             "How does the linear profiler achieve sub-5s performance?"
         ]
 
     # =========================================================================
-    # INTENT 2: The 14 Separate Web Pages Breakdown
+    # INTENT 2: The 13 Separate Web Pages Breakdown
     # =========================================================================
     elif any(k in query for k in [
-        "pages", "page", "14", "thaniya", "vera vera", "routes", "web pages",
+        "pages", "page", "13", "14", "thaniya", "vera vera", "routes", "web pages",
         "subnav", "navigation", "views", "screens", "tabs"
     ]):
         reply = (
-            f"### 🌐 AegisOps 14 Dedicated Enterprise Pages & Architecture\n\n"
+            f"### 🌐 AegisOps 13 Dedicated Enterprise Pages & Architecture\n\n"
             f"AegisOps oru **Tier-1 MNC Enterprise Production Standard**-ku thagapadi, ovvoru major operational responsibility-kum thani thani separate pages (`.html` and clean routes) maintain pannudhu:\n\n"
             f"1. **⚡ Executive Overview ([`index.html`](/))**: Incident summary, lifecycle stepper (Detection ➔ Resolution), KPI cards, and live sensor stream.\n"
             f"2. **🕒 Forensic Timeline ([`timeline.html`](/timeline))**: Full chronological milestone chain with verbatim actor quotes and phase filtering.\n"
@@ -208,11 +240,10 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
             f"10. **🧬 Forensic Matrix & Raw Data ([`forensic-matrix.html`](/forensic-matrix))**: Cryptographically hashed SHA-256 evidence matrix and 300,000 raw dataset browser with pagination.\n"
             f"11. **⏱️ Interactive Timeline ([`interactive-timeline.html`](/interactive-timeline))**: Interactive time-scrubber slider with animated multi-phase playback controls.\n"
             f"12. **📡 Multi-Task Radar ([`radar.html`](/radar))**: 6-axis SRE operational radar vectors (Detection, Resolution, Grounding, Noise Reduction, Security, Blast Containment).\n"
-            f"13. **🕸️ Causal Graph & Impacts ([`causal-graph.html`](/causal-graph))**: Interactive Directed Acyclic Graph (DAG) showing failure propagation pathways.\n"
-            f"14. **🗺️ Damage Location / GIS ([`gis-damage.html`](/gis-damage))**: Global datacenter blast radius map with live regional latency pings (US-East-1, EU-West-1, AP-South-1)."
+            f"13. **🕸️ Causal Graph & Impacts ([`causal-graph.html`](/causal-graph))**: Interactive Directed Acyclic Graph (DAG) showing failure propagation pathways."
         )
         followups = [
-            "How does dataset upload update all 14 pages?",
+            "How does dataset upload update all 13 pages?",
             "What is the verified root cause of this incident?",
             "Explain the 10-step multi-agent pipeline"
         ]
@@ -354,22 +385,22 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
             f"👉 Open **[`/causal-graph`](/causal-graph)** to inspect the interactive node flow with physics-based layout!"
         )
         followups = [
-            "Explain the GIS damage map",
+            "Show the Subsystem Topology",
             "What is the verified root cause?",
-            "Show the 14 enterprise pages"
+            "Show the 13 enterprise pages"
         ]
 
     # =========================================================================
-    # INTENT 5.3: GIS Damage Map & Regional Telemetry
+    # INTENT 5.3: Subsystem Blast Radius & Topology Mesh
     # =========================================================================
-    elif any(k in query for k in ["gis", "map", "location", "datacenter", "ping", "region", "blast radius"]):
+    elif any(k in query for k in ["topology", "mesh", "service", "services", "blast radius", "propagation", "victim"]):
         reply = (
-            f"### 🗺️ Global Datacenter Blast Radius & GIS Damage Map\n\n"
-            f"The **[`/gis-damage`](/gis-damage)** page visualizes real-time global infrastructure health:\n\n"
-            f"- **Primary Epicenter:** `US-East-1 (N. Virginia)` — 94% Blast Radius, 1,420ms p99 latency, 14.8% error rate.\n"
-            f"- **Secondary Degradation:** `US-West-2 (Oregon)` — Standby failover degraded (420ms p99 latency, 8.2% error rate).\n"
-            f"- **Healthy Regions:** `EU-West-1 (Dublin)` & `AP-South-1 (Mumbai)` — Operating at nominal 48ms latency.\n"
-            f"- **Automated SRE Action:** Automated 40% ingress rate shedding applied to non-critical read traffic to preserve core financial transactions."
+            f"### 🌐 Subsystem Topology & Blast Radius Containment\n\n"
+            f"The **[`/topology`](/topology)** and **[`/causal-graph`](/causal-graph)** pages visualize real-time service dependency health:\n\n"
+            f"- **Primary Failure Epicenter:** `payment-processor` — 94% blast radius, HikariCP connection pool lock (98/100 connections).\n"
+            f"- **Cascading Impact:** `api-gateway-service` experienced 503 timeouts, resulting in `ingress-alb` surge to 6,200ms p99 latency.\n"
+            f"- **Asynchronous Queue Bloat:** `Kafka Event Bus` accumulated +24,000 uncommitted payment settlement messages.\n"
+            f"- **Autonomous SRE Action:** Automated 40% ingress rate shedding applied to non-critical read traffic to preserve core checkout transactions."
         )
         followups = [
             "Show the Causal Graph",
@@ -453,8 +484,8 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
         )
         followups = [
             "What is the predicted failure horizon?",
-            "How does the GIS damage map work?",
-            "Show the causal dependency graph"
+            "Show the causal dependency graph",
+            "What are the 6 radar axes?"
         ]
 
     # =========================================================================
@@ -547,18 +578,18 @@ def ask_copilot(req: ChatRequest, db: Session = Depends(get_db)):
             f"Operational telemetry (Slack chats, Datadog alarms, Jira tickets, application logs, and CI/CD events) oru incident nadakkum podhu fragmentary-ah irukkum. "
             f"AegisOps adha **100% verified, structured, explainable, and audit-ready incident narratives & post-mortems**-ah convert pannudhu.\n\n"
             f"**Key Capabilities You Can Ask Me About:**\n"
-            f"- ⚡ **Dataset Upload & Analysis**: Upload panra dataset-a analyze panni 14 web pages-layum live-ah update panradhu.\n"
+            f"- ⚡ **Dataset Upload & Analysis**: Upload panra dataset-a analyze panni 13 web pages-layum live-ah update panradhu.\n"
             f"- 🕒 **Deterministic Timeline Sorter**: LLM hallucination illama Unix Epoch/ISO-8601 UTC chronological order-la sort panradhu.\n"
             f"- 🔍 **5-Tier Root Cause Analysis (5-Whys)**: Surface symptom la irunthu root cause trigger varaikkum recursive causal tree build panradhu.\n"
             f"- 🧠 **Trained AIOps AI Neural Models**: `AegisLogNet-v2` anomaly scoring and severity classification.\n"
             f"- 🔒 **Zero-Trust Privacy**: Automated PII masking and cryptographic SHA-256 evidence hashing.\n"
-            f"- 🌐 **14 Enterprise Pages**: Full suite of dedicated pages for Topology, Logs, Causal Graph, GIS Map, Radar, and Post-Mortems."
+            f"- 🌐 **13 Enterprise Pages**: Full suite of dedicated pages for Topology, Logs, Causal Graph, Radar, and Post-Mortems."
             f"{rag_section}"
         )
         followups = [
             "What happens when I upload a new dataset?",
             "What is the verified root cause of this incident?",
-            "What are the 14 enterprise pages in this application?"
+            "What are the 13 enterprise pages in this application?"
         ]
 
     return ChatResponse(

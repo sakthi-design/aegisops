@@ -27,9 +27,7 @@ routes = [
     '/radar',
     '/radar.html',
     '/causal-graph',
-    '/causal-graph.html',
-    '/gis-damage',
-    '/gis-damage.html'
+    '/causal-graph.html'
 ]
 
 print(f"Testing {len(routes)} MNC routes against http://localhost:8000 ...")

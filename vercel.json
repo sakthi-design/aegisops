@@ -72,10 +72,6 @@
       "dest": "/frontend/public/causal-graph.html"
     },
     {
-      "src": "/gis-damage",
-      "dest": "/frontend/public/gis-damage.html"
-    },
-    {
       "src": "/aiops-ml",
       "dest": "/frontend/public/aiops-ml.html"
     },

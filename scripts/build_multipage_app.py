@@ -124,14 +124,6 @@ PAGES = [
         "icon": "🕸️",
         "breadcrumb": "Directed Causal Dependency & Blast Propagation Graph",
         "extract_regex": r'(<!-- ===+ -->\s*<!-- TAB 13: CAUSAL GRAPH & IMPACT PROPAGATION -->\s*<!-- ===+ -->\s*<section id="tab-causal-graph"[\s\S]*?</section>)'
-    },
-    {
-        "id": "tab-gis-damage",
-        "file": "gis-damage.html",
-        "title": "Damage Location / GIS",
-        "icon": "🗺️",
-        "breadcrumb": "Global Datacenter Blast Radius & GIS Map",
-        "extract_regex": r'(<!-- ===+ -->\s*<!-- TAB 14: DAMAGE LOCATION / GIS INFRASTRUCTURE BLAST RADIUS -->\s*<!-- ===+ -->\s*<section id="tab-gis-damage"[\s\S]*?</section>)'
     }
 ]
 

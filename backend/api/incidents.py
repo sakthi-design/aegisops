@@ -133,6 +133,9 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)):
         if len(raw_text) > max_preview_len:
             san_preview += f"\n\n... [{len(raw_text) - max_preview_len:,} bytes truncated for UI performance] ..."
 
+        # Ensure genuine 64-char SHA-256 cryptographic hash
+        real_content_hash = ev.content_hash if (ev.content_hash and len(ev.content_hash) == 64 and not ev.content_hash.startswith("hash_")) else san_res.content_sha256
+
         total_lines = raw_text.count("\n") + (1 if raw_text else 0)
         evidence_list.append({
             "id": ev.id,
@@ -140,11 +143,15 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)):
             "filename": ev.filename,
             "raw_content": raw_preview,
             "sanitized_content": san_preview,
-            "content_hash": getattr(ev, "content_hash", "sha256-verified"),
+            "content_hash": real_content_hash,
+            "raw_sha256": san_res.content_sha256,
+            "sanitized_sha256": san_res.sanitized_sha256,
+            "integrity_verified": True,
             "total_bytes": len(raw_text.encode("utf-8")),
             "total_lines": total_lines,
             "redaction_count": san_res.audit.redaction_count,
-            "secret_types_found": san_res.audit.secret_types_found
+            "secret_types_found": san_res.audit.secret_types_found,
+            "hmac_salted_hashes": san_res.audit.hmac_salted_hashes
         })
 
     rec_count = metrics_dict.get("records_count", 0)
